@@ -28,7 +28,7 @@
 
 
 int main(int argc, char *argv[]) {
-    //bool registered = false;
+    bool registered = false;
     int fd_TCP, fd_UDP; //File Descriptors
     int errcode, maxfd, counter, arg_count; //Auxiliary variables
     char *IP, *TCP, *regIP, *regUDP;
@@ -207,8 +207,11 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0) { //join (j) ring id
-                if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2) {
+            if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0 ) { //join (j) ring id
+                if(registered == true){
+                    printf("Nó já registado\n");
+                }
+                if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2 && !registered) {
                     join_command(arguments[0], arguments[1],fd_UDP,TEJO_res , IP, TCP);
                     strcpy(ring , arguments[0]);
                     strcpy(id, arguments[1]);
@@ -220,6 +223,7 @@ int main(int argc, char *argv[]) {
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
                 if (arg_count == 0) {
                     leave_command(ring, id, fd_UDP, TEJO_res , IP, TCP);
+                    registered = false;
                 } else {
                     printf("Sintax error\n");
                 }
@@ -246,12 +250,12 @@ int main(int argc, char *argv[]) {
             }
             //Confirmar que vem do tejo?
 
+            if(memcmp(buffer, "OKREG", strlen("OKREG")) == 0){
+                registered = true;
+            }
 
-            //SE RECEBER OKUNREG => registered = false;
-            //SE RECEBER OKREG => registered = true;
 
-
-            write(1, buffer, n);
+            //write(1, buffer, n);
             printf("\n");
         }
     }    

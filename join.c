@@ -14,12 +14,16 @@ int join_command(char* ring, char* id, int fd, struct addrinfo *info, char* IP, 
     get_nodeslist(fd, info, ring);
     reg_node(fd,info, ring, id, IP, TCP);
 
+    printf("Nó registado na rede de nós\n");
+
     return 0;
 }
 
 int leave_command(char* ring, char* id, int fd, struct addrinfo *info, char* IP, char* TCP){
 
     unreg_node(fd, info, ring, id);
+
+    printf("Nó retirado da rede de nós\n");
 
     return 0;
 }
