@@ -221,11 +221,12 @@ int main(int argc, char *argv[]) {
             }
 
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
-                if (arg_count == 0) {
+            
+                if (arg_count == 0 && registered) {
                     leave_command(ring, id, fd_UDP, TEJO_res , IP, TCP);
                     registered = false;
                 } else {
-                    printf("Sintax error\n");
+                    printf("Nó não registado ou erro de syntax\n");
                 }
             }
 
