@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -Wall -g
 
 # Source files
-SRCS = join.c tejo.c main.c
+SRCS = join.c tejo.c help.c main.c 
 # Object files
 OBJS = $(SRCS:.c=.o)
 # Executable name

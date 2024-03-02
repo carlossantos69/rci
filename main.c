@@ -11,6 +11,7 @@
 
 #include "tejo.h"
 #include "join.h"
+#include "help.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -25,16 +26,9 @@
 #define BUFFER_SIZE 1024
 
 
-/*int help(){
-    printf("");
-}*/
-
-
-
-
 
 int main(int argc, char *argv[]) {
-    //bool registered = false; //
+    //bool registered = false;
     int fd_TCP, fd_UDP; //File Descriptors
     int errcode, maxfd, counter, arg_count; //Auxiliary variables
     char *IP, *TCP, *regIP, *regUDP;
@@ -50,6 +44,8 @@ int main(int argc, char *argv[]) {
 
     char ring[4];
     char id[3];
+
+    print_help();
 
 
     if (argc != 3 && argc != 5) {
@@ -223,7 +219,7 @@ int main(int argc, char *argv[]) {
 
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
                 if (arg_count == 0) {
-                    leave_command(ring, id,fd_UDP,TEJO_res , IP, TCP);
+                    leave_command(ring, id, fd_UDP, TEJO_res , IP, TCP);
                 } else {
                     printf("Sintax error\n");
                 }

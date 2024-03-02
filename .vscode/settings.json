@@ -2,6 +2,7 @@
     "files.associations": {
         "types.h": "c",
         "unistd.h": "c",
-        "tejo.h": "c"
+        "tejo.h": "c",
+        "join.h": "c"
     }
 }
