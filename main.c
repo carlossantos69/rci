@@ -25,9 +25,16 @@
 #define BUFFER_SIZE 1024
 
 
+/*int help(){
+    printf("");
+}*/
+
+
+
+
 
 int main(int argc, char *argv[]) {
-    bool registered = false; //
+    //bool registered = false; //
     int fd_TCP, fd_UDP; //File Descriptors
     int errcode, maxfd, counter, arg_count; //Auxiliary variables
     char *IP, *TCP, *regIP, *regUDP;
@@ -40,6 +47,9 @@ int main(int argc, char *argv[]) {
     socklen_t addrlen;
     struct sockaddr_in addr;
     fd_set read_fds; //Select() FD List
+
+    char ring[4];
+    char id[3];
 
 
     if (argc != 3 && argc != 5) {
@@ -203,7 +213,17 @@ int main(int argc, char *argv[]) {
 
             if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0) { //join (j) ring id
                 if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2) {
-                    join_command();
+                    join_command(arguments[0], arguments[1],fd_UDP,TEJO_res , IP, TCP);
+                    strcpy(ring , arguments[0]);
+                    strcpy(id, arguments[1]);
+                } else {
+                    printf("Sintax error\n");
+                }
+            }
+
+            if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
+                if (arg_count == 0) {
+                    leave_command(ring, id,fd_UDP,TEJO_res , IP, TCP);
                 } else {
                     printf("Sintax error\n");
                 }
