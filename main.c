@@ -31,7 +31,7 @@
 
 int main(int argc, char *argv[]) {
     bool registered = false;
-    int fd_TCP, fd_UDP, fd_succ; //File Descriptors
+    int fd_TCP, fd_UDP, fd_succ, newfd; //File Descriptors
     int errcode, maxfd, counter, arg_count, nodes_number; //Auxiliary variables
     char *IP, *TCP, *regIP, *regUDP;
     char input[MAX_COMMAND_SIZE];
@@ -172,12 +172,39 @@ int main(int argc, char *argv[]) {
             }
             arguments[arg_count] = NULL;
 
+            if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
+            
+                if (arg_count == 0 && registered) {
+                    leave_command(ring, id, fd_UDP, TEJO_res , IP, TCP);
+                    addrlen = sizeof(addr);
+                    n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+                    if (n == -1) {
+                        printf("Erro a ler do socket UDP\n");
+                        exit(1);
+                    }
+
+                    if (memcmp(buffer, "OKUNREG", strlen("OKUNREG"))==0) {
+                        printf("SUCESS\n");
+                            registered = false;
+                    } else {
+                        printf("erro\n");
+                    }
+                   
+                } else {
+                    printf("Nó não registado ou erro de syntax\n");
+                }
+            }
+
+            if (strcmp(command,"exit") == 0 || strcmp(command, "x") == 0) {
+                break;
+            }
+
 
             if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0 ) { //join (j) ring id
                 if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2 ) {
-                    if(registered){
+                    if (registered) {
                         printf("Nó já registado\n");
-                    }else{
+                    } else {
                         strcpy(ring , arguments[0]);
                         strcpy(id, arguments[1]);
                         get_nodeslist(fd_UDP, TEJO_res, ring);
@@ -200,7 +227,7 @@ int main(int argc, char *argv[]) {
 
                         printf("%s\n", command);
 
-                        
+                        //Ver lista de nós e escolher o sucessor e o ID
                         if (strcmp(command, "NODESLIST") == 0) {
                             nodes_number = 0; //Nodes which are in the list
                             bool used[100] = { false }; //ID's which are in use on the ring
@@ -240,10 +267,41 @@ int main(int argc, char *argv[]) {
                                 strcpy(succID, arguments[0]);
                                 strcpy(succIP, arguments[1]);
                                 strcpy(succTCP, arguments[2]);
+                            } else {
+                                strcpy(succID, id);
+                                strcpy(succIP, IP);
+                                strcpy(succTCP, TCP);
                             }
-                        } 
-                        reg_node(fd_UDP, TEJO_res , ring, id, IP, TCP);
+                        }
 
+
+                        //Entrar no anél e mandar comando para sucessor
+                        if(strcmp(succIP, IP) == 0 && strcmp(succTCP, TCP) == 0){
+                            printf("Primeiro nó a juntar-se, não se conecta a si mesmo.\n");
+                        } else {
+                            fd_succ = socket(AF_INET, SOCK_STREAM, 0);
+                            if(fd_succ == -1){
+                                printf("Erro a criar a socket TCP\n");
+                                exit(1);
+                            }
+
+
+                            errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
+                            if(errcode != 0) {
+                                printf("Error searching sucessor IP\n");
+                                exit(1);
+                            }
+
+                            n = connect(fd_succ, succ_res->ai_addr,  succ_res->ai_addrlen);
+                            if(n==-1) {
+                                printf("Erro a estabelecer ligação");
+                                exit(1);
+                            }
+                            entry_command(fd_succ,id, IP, TCP);
+                        }
+
+                        //Registar no anél
+                        reg_node(fd_UDP, TEJO_res , ring, id, IP, TCP);
                         addrlen = sizeof(addr);
                         n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
                         if (n == -1) {
@@ -253,9 +311,13 @@ int main(int argc, char *argv[]) {
 
                         if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
                             printf("SUCESS\n");
+                            registered = true;
                         }else{
-                            printf("falha\n");
+                            printf("erro\n");
+                            exit(1);
                         }
+
+
 
                     }
                 } else {
@@ -263,7 +325,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            if(strcmp(command, "dj") == 0){
+            if (strcmp(command, "dj") == 0) {
                 if (arg_count == 4 && strlen(arguments[0]) == 2 && strlen(arguments[1]) == 2 && strlen(arguments[3]) == 5) {
                     strcpy(id, arguments[0]);
                     strcpy(succID, arguments[1]);
@@ -276,13 +338,13 @@ int main(int argc, char *argv[]) {
                     }
 
                     errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
-                    if(errcode !=0){
+                    if (errcode !=0) {
                         printf("Erro a procurar o sucessor\n");
                         exit(1);
                     }
 
                     fd_succ = socket(AF_INET, SOCK_STREAM, 0);
-                    if(fd_succ == -1){
+                    if (fd_succ == -1) {
                         printf("Erro a criar a socket TCP\n");
                         exit(1);
                     }
@@ -295,10 +357,26 @@ int main(int argc, char *argv[]) {
 
                     entry_command(fd_succ,succID, succIP, succTCP);
 
+                    addrlen = sizeof(addr);
+                    if ((newfd = accept(fd_TCP, (struct sockaddr*) &addr, &addrlen)) == -1) {
+                        printf("Error accepting TCP connection\n");
+                        exit(1);
+                    }
+                    //Esperar pela mensagem SUCC PRED ENTRY CHORD
+                    //Dar set como File Descriptor do antecessor sucessor chord etc
+                    n = read(newfd, buffer, BUFFER_SIZE);
+                    if (n== -1) {
+                        printf("Error reading TCP message\n");
+                        exit(1);
+                    }
+                    printf("Received via TCP newfd\n");
+                    write(1, buffer, n);
+
                 } else {
                     printf("Sintax error\n"); 
                 }
             }
+            
 
             if (strcmp(command,"direct") == 0) {
                 if (arg_count == 5) {
@@ -308,8 +386,9 @@ int main(int argc, char *argv[]) {
                         strcpy(succIP, arguments[3]);
                         strcpy(succTCP, arguments[4]);
 
-                        if(strcmp(succIP, IP) == 0 && strcmp(succTCP, TCP) == 0){
-                        printf("Primeiro nó a juntar-se, não se conecta a si mesmo.\n");
+                        //if(strcmp(succIP, IP) == 0 && strcmp(succTCP, TCP) == 0){
+                        //printf("Primeiro nó a juntar-se, não se conecta a si mesmo.\n");
+                        //}
                     }
 
                     errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
@@ -332,66 +411,79 @@ int main(int argc, char *argv[]) {
 
                     entry_command(fd_succ,succID, succIP, succTCP);
                     
-                        
-                    } else {
-                        printf("Sintax error\n");
-                    }
                 } else {
                     printf("Sintax error\n"); 
                 }
             }
 
-        
 
-            if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
-            
-                if (arg_count == 0 && registered) {
-                    leave_command(ring, id, fd_UDP, TEJO_res , IP, TCP);
-                    registered = false;
-                } else {
-                    printf("Nó não registado ou erro de syntax\n");
-                }
-            }
-
-            if (strcmp(command,"exit") == 0 || strcmp(command, "x") == 0) {
-                break;
-            }
-
-            if(strcmp(command, "show") == 0 && strcmp(arguments[0], "topology")== 0 ){
+            if (strcmp(command, "show") == 0 && strcmp(arguments[0], "topology")== 0 ) {
                 if(registered){
-                    printf("O nó %s tem ip: %s\n", id ,IP);
-                    if( succID != NULL && succIP != NULL) {
-                        printf("O seu sucessor %s tem ip: %s\n", succID, succIP);
+                    if(strcmp(id,succID) == 0 && strcmp(IP,succIP)==0 && strcmp(TCP,succTCP)==0){
+                        printf("Nó %s regsitado com ip: %s  e na porta: %s\n", id ,IP, TCP);
+                        printf("Nó sem sucessor, porque é o primeiro nó\n");
+                    }else{
+                        printf("O nó %s tem ip: %s  e está na porta: %s\n", id ,IP, TCP);
+                        printf("O seu sucessor %s tem ip: %s e está na porta: %s\n", succID, succIP, succTCP);
                     }
-                }else{
+                }
+                else{
                     printf("Nó não registado\n");
                 }
                     
             }
 
-            if(strcmp(command, "st")== 0){                    
-                printf("O nó %s tem ip: %s\n", id ,IP);
-                if( succID != NULL && succIP != NULL) {
-                    printf("O seu sucessor %s tem ip: %s\n", succID, succIP);
+            if(strcmp(command, "st")== 0){          
+                if(registered){
+                    if(strcmp(id,succID) == 0 && strcmp(IP,succIP)==0 && strcmp(TCP,succTCP)==0){
+                        printf("Nó %s regsitado com ip: %s  e na porta: %s\n", id ,IP, TCP);
+                        printf("Nó sem sucessor, porque é o primeiro nó\n");
+                    }else{
+                    printf("O nó %s tem ip: %s  e está na porta: %s\n", id ,IP, TCP);
+                    printf("O seu sucessor %s tem ip: %s e está na porta: %s\n", succID, succIP, succTCP);
+                    }
+                }
+                else{
+                    printf("Nó não registado\n");
                 }
             }
- 
+
+
+
+
+
+
+
         }
         if (FD_ISSET(fd_TCP,&read_fds)) {
             printf("Socket TCP Preparado\n");
 
+            addrlen = sizeof(addr);
+            if ((newfd = accept(fd_TCP, (struct sockaddr*) &addr, &addrlen)) == -1) {
+                printf("Error accepting TCP connection\n");
+                exit(1);
+            }
+
+            //Esperar pela mensagem SUCC PRED ENTRY CHORD
+            //Dar set como File Descriptor do antecessor sucessor chord etc
+
+            n = read(newfd, buffer, BUFFER_SIZE);
+            if (n== -1) {
+                printf("Error reading TCP message\n");
+                exit(1);
+            }
+            buffer[n] = '\0'; //Experimentar
+
+            printf("Received via TCP newfd\n");
+            write(1, buffer, n);
         }
+
+
         if (FD_ISSET(fd_UDP,&read_fds)) {
-            printf("Socket UDP Preparado\n");
+            //printf("Socket UDP Preparado\n");
 
-            if(memcmp(buffer, "OKREG", strlen("OKREG")) == 0){
-                registered = true;
-            }
-            if(memcmp(buffer, "OKUNREG", strlen("OKUNREG")) == 0){
-                registered = false;
-            }
-
-
+            //TODO: CHECKAR SE VEM MESAGEM DO TEJO
+            //Nunca é suposto vir nada
 
             //write(1, buffer, n);
             printf("\n");
