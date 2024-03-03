@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
                                 strcpy(succID, arguments[0]);
                                 strcpy(succIP, arguments[1]);
                                 strcpy(succTCP, arguments[2]);
-                            } else {
+                            } else { // first node succ is himself
                                 strcpy(succID, id);
                                 strcpy(succIP, IP);
                                 strcpy(succTCP, TCP);
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
 
                         //Entrar no anél e mandar comando para sucessor
                         if(strcmp(succIP, IP) == 0 && strcmp(succTCP, TCP) == 0){
-                            printf("Primeiro nó a juntar-se, não se conecta a si mesmo.\n");
+                            printf("Primeiro nó a juntar-se.\n");
                         } else {
                             fd_succ = socket(AF_INET, SOCK_STREAM, 0);
                             if(fd_succ == -1){
@@ -435,13 +435,8 @@ int main(int argc, char *argv[]) {
 
             if(strcmp(command, "st")== 0){          
                 if(registered){
-                    if(strcmp(id,succID) == 0 && strcmp(IP,succIP)==0 && strcmp(TCP,succTCP)==0){
-                        printf("Nó %s regsitado com ip: %s  e na porta: %s\n", id ,IP, TCP);
-                        printf("Nó sem sucessor, porque é o primeiro nó\n");
-                    }else{
                     printf("O nó %s tem ip: %s  e está na porta: %s\n", id ,IP, TCP);
-                    printf("O seu sucessor %s tem ip: %s e está na porta: %s\n", succID, succIP, succTCP);
-                    }
+                    printf("O seu sucessor %s tem ip: %s e está na porta: %s\n", succID, succIP, succTCP);                    
                 }
                 else{
                     printf("Nó não registado\n");
@@ -473,6 +468,22 @@ int main(int argc, char *argv[]) {
                 exit(1);
             }
             buffer[n] = '\0'; //Experimentar
+
+            command = strtok(buffer, " \t\n");
+            arg_count = 0;
+            char *token;
+            while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
+                arguments[arg_count] = token;
+                arg_count++;
+            }
+            arguments[arg_count] = NULL;
+
+            if(strcmp(command, "ENTRY") == 0){
+                strcpy(succID,arguments[0]);
+                strcpy(succIP,arguments[1]);
+                strcpy(succTCP,arguments[2]);
+                
+            }
 
             printf("Received via TCP newfd\n");
             write(1, buffer, n);
