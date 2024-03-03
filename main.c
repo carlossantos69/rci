@@ -22,20 +22,22 @@
 
 #define MAX_COMMAND_SIZE 100
 #define MAX_ARGUMENT_COUNT 10
+#define MAX_NODE_COUNT 100
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 2000
 
 
 
 int main(int argc, char *argv[]) {
     bool registered = false;
     int fd_TCP, fd_UDP; //File Descriptors
-    int errcode, maxfd, counter, arg_count; //Auxiliary variables
+    int errcode, maxfd, counter, arg_count, nodes_number; //Auxiliary variables
     char *IP, *TCP, *regIP, *regUDP;
     char input[MAX_COMMAND_SIZE];
     char buffer[BUFFER_SIZE]; //Temporary read buffers
     char *command;
-    char *arguments[MAX_ARGUMENT_COUNT];
+    char succID[3], succIP[16], succTCP[6]; //Info of Sucessor
+    char *arguments[MAX_NODE_COUNT*3];
     ssize_t n;
     struct addrinfo hints, *res, *TEJO_res;
     socklen_t addrlen;
@@ -163,7 +165,7 @@ int main(int argc, char *argv[]) {
             command = strtok(input, " \t\n");
             arg_count = 0;
             char *token;
-            while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_ARGUMENT_COUNT) {
+            while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
                 arguments[arg_count] = token;
                 arg_count++;
             }
@@ -208,17 +210,128 @@ int main(int argc, char *argv[]) {
             }
 
             if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0 ) { //join (j) ring id
-                if(registered == true){
-                    printf("Nó já registado\n");
-                }
-                if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2 && !registered) {
-                    join_command(arguments[0], arguments[1],fd_UDP,TEJO_res , IP, TCP);
-                    strcpy(ring , arguments[0]);
-                    strcpy(id, arguments[1]);
+                if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2 ) {
+                    if(registered){
+                        printf("Nó já registado\n");
+                    }else{
+                        strcpy(ring , arguments[0]);
+                        strcpy(id, arguments[1]);
+                        get_nodeslist(fd_UDP, TEJO_res, ring);
+                        addrlen = sizeof(addr);
+                        n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen); // ler do Tejo
+                        if (n == -1) {
+                            printf("Erro a ler do socket UDP\n");
+                            exit(1);
+                        }
+
+                        command = strtok(buffer, " \t\n");
+                        arg_count = 0;
+                        char *token;
+                        token = strtok(NULL, " \t\n"); //Eliminate first argument (its ring id)
+                        while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < 300) {
+                            arguments[arg_count] = token;
+                            arg_count++;
+                        }
+                        arguments[arg_count] = NULL;
+
+                        printf("%s\n", command);
+
+                        for (int i=0; i < arg_count; i++)
+                        {
+                            printf("%s\n", arguments[i]);
+                        }
+
+                        if (strcmp(command, "NODESLIST") == 0) {
+                            nodes_number = 0; //Nodes which are in the list
+                            bool used[100] = { false }; //ID's which are in use on the ring
+
+                            for (int i=0; i<arg_count-1; i=i+3) {
+                                printf("Processing argument at index %d: %s\n", i, arguments[i]);
+                                int id = atoi(arguments[i]);
+                                if (id >= 0 && id < 100) { // Check bounds before accessing used array
+                                    used[id] = true;
+                                    nodes_number++;
+                                } else {
+                                    printf("Invalid ID: %d\n", id);
+                                    // Decide what to do if ID is invalid, such as exiting the loop or handling the error
+                                }
+                            }
+                            
+
+                            if (used[atoi(id)]) {
+                                printf("%s is currently in use. ", id);
+                                for (int i=0; i<100; ++i) {
+                                    if (!used[i]) {
+                                        sprintf(buffer, "%d", i);
+                                        strcpy(id, buffer);
+                                        if (strlen(id) == 1) {
+                                            id[1] = id[0];
+                                            id[0] = '0';
+                                            id[2] = '\0';
+                                        }
+                                        break;
+                                    }
+                                }
+                                printf("%s will be used instead\n", id);
+                            } else {
+                                printf("%s is available and will be used\n", id);
+                            }
+
+                            if (nodes_number > 0) { //Do not do copy if first node to join
+                                strcpy(succID, arguments[0]);
+                                strcpy(succIP, arguments[1]);
+                                strcpy(succTCP, arguments[2]);
+                            }
+                        } 
+                        reg_node(fd_UDP, TEJO_res , ring, id, IP, TCP);
+
+                        addrlen = sizeof(addr);
+                        n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+                        if (n == -1) {
+                            printf("Erro a ler do socket UDP\n");
+                            exit(1);
+                        }
+
+                        if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
+                            printf("SUCESS");
+                        }else{
+                            printf("falha");
+                        }
+
+                    }
                 } else {
                     printf("Sintax error\n");
                 }
             }
+
+            if(strcmp(command, "dj") == 0){
+                if (arg_count == 4 && strlen(arguments[0]) == 3) {
+                    strcpy(id, arguments[0]);
+                    strcpy(succID, arguments[1]);
+                    strcpy(succIP, arguments[2]);
+                    strcpy(succTCP, arguments[3]);
+                } else {
+                    printf("Sintax error\n"); 
+                }
+            }
+
+            if (strcmp(command,"direct") == 0) {
+                if (arg_count == 5) {
+                    if (strcmp(arguments[0],"join") == 0 && strlen(arguments[1]) == 3) {
+                        strcpy(id, arguments[1]);
+                        strcpy(succID, arguments[2]);
+                        strcpy(succIP, arguments[3]);
+                        strcpy(succTCP, arguments[4]);
+                        //directjoin_command(id,succID,succIP,succTCP)
+                    } else {
+                        printf("Sintax error\n");
+                    }
+                } else {
+                    printf("Sintax error\n"); 
+                }
+            }
+
+        
 
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
             
@@ -242,21 +355,16 @@ int main(int argc, char *argv[]) {
         if (FD_ISSET(fd_UDP,&read_fds)) {
             printf("Socket UDP Preparado\n");
 
-
-            addrlen = sizeof(addr);
-            n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-            if (n == -1) {
-                printf("Erro a ler do socket UDP\n");
-                exit(1);
-            }
-            //Confirmar que vem do tejo?
-
             if(memcmp(buffer, "OKREG", strlen("OKREG")) == 0){
                 registered = true;
             }
+            if(memcmp(buffer, "OKUNREG", strlen("OKUNREG")) == 0){
+                registered = false;
+            }
 
 
-            //write(1, buffer, n);
+
+            write(1, buffer, n);
             printf("\n");
         }
     }    
