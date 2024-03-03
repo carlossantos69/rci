@@ -3,6 +3,7 @@
         "types.h": "c",
         "unistd.h": "c",
         "tejo.h": "c",
-        "join.h": "c"
+        "join.h": "c",
+        "stdio.h": "c"
     }
 }

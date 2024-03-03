@@ -66,26 +66,3 @@ int sendUDP(int fd, struct addrinfo *info, char* message) {
     return 0;
 }
 
-
-int viewAll(int fd, struct addrinfo *info) {
-    char* message = (char*) malloc(strlen("NODES ") + 6);
-
-    char str[12];
-
-
-    for (int i=0; i<100; ++i) {
-        strcpy(message, "NODES ");
-        if (i<10) {
-            strcat(message, "0");
-        }
-        if (i<100) {
-            strcat(message, "0");
-        }
-        sprintf(str, "%d", i);
-        strcat(message, str);
-        strcat(message, "\n");
-        sendUDP(fd, info, message);
-    }
-
-    return 0;
-}

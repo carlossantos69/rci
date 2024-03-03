@@ -9,5 +9,3 @@ int reg_node(int fd, struct addrinfo *info, char* ring, char* id, char* IP, char
 int unreg_node(int fd, struct addrinfo *info, char* ring, char* id);
 
 int sendUDP(int fd, struct addrinfo *info, char* message);
-
-int viewAll(int fd, struct addrinfo *info);
