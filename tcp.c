@@ -50,3 +50,22 @@ int succ_command(int fd, char* id, char* IP, char* TCP){
     return 0;
 
 }
+
+
+int pred_command(int fd, char* id){
+    char *message = (char*) malloc(strlen("PRED") + strlen(id) + 2);
+
+    if (message == NULL){
+        return 1;
+    }
+    strcpy(message, "PRED ");
+    strcat(message, id);
+    strcat(message, "\n");
+
+
+    write(fd, message, strlen(message));
+    free(message);
+
+    return 0;
+
+}

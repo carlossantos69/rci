@@ -469,6 +469,9 @@ int main(int argc, char *argv[]) {
             }
             buffer[n] = '\0'; //Experimentar
 
+            printf("Received via TCP newfd\n");
+            write(1, buffer, n);
+
             command = strtok(buffer, " \t\n");
             arg_count = 0;
             char *token;
@@ -481,12 +484,31 @@ int main(int argc, char *argv[]) {
             if(strcmp(command, "ENTRY") == 0){
                 strcpy(succID,arguments[0]);
                 strcpy(succIP,arguments[1]);
-                strcpy(succTCP,arguments[2]);
-                
+                strcpy(succTCP,arguments[2]);  
+
+                fd_succ = socket(AF_INET, SOCK_STREAM, 0);
+                if(fd_succ == -1){
+                    printf("Erro a criar a socket TCP\n");
+                    exit(1);
+                }
+
+                errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
+                if(errcode != 0) {
+                    printf("Error searching sucessor IP\n");
+                    exit(1);
+                }
+
+                n = connect(fd_succ, succ_res->ai_addr,  succ_res->ai_addrlen);
+                if(n==-1) {
+                    printf("Erro a estabelecer ligação");
+                    exit(1);
+                }
+
+                pred_command(fd_succ, id);
+                succ_command(fd_succ, succID, succIP, succTCP);
+
             }
 
-            printf("Received via TCP newfd\n");
-            write(1, buffer, n);
         }
 
 
