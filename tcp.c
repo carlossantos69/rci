@@ -53,7 +53,7 @@ int succ_command(int fd, char* id, char* IP, char* TCP){
 
 
 int pred_command(int fd, char* id){
-    char *message = (char*) malloc(strlen("PRED") + strlen(id) + 2);
+    char *message = (char*) malloc(strlen("PRED") + strlen(id) + 3);
 
     if (message == NULL){
         return 1;
