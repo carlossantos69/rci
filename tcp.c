@@ -31,7 +31,7 @@ int entry_command(int fd,char* id, char* IP, char* TCP){
 }
 
 int succ_command(int fd, char* id, char* IP, char* TCP){
-    char *message = (char*) malloc(strlen("ENTRY") + strlen(id) + strlen(IP) + strlen(TCP)+ 5);
+    char *message = (char*) malloc(strlen("SUCC") + strlen(id) + strlen(IP) + strlen(TCP)+ 5);
 
     if (message == NULL){
         return 1;

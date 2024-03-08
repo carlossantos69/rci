@@ -167,6 +167,7 @@ int main(int argc, char *argv[]) {
             printf("Error no select\n");
             exit(1);
         }
+
         if (FD_ISSET(STDIN_FILENO, &read_fds)) { //Input ready
             fgets(input, sizeof(input), stdin);
 
@@ -538,6 +539,7 @@ int main(int argc, char *argv[]) {
 
         if (FD_ISSET(succFD, &read_fds)) {
             printf("Recebido do sucessor\n");
+
             n = read(succFD, buffer, BUFFER_SIZE);
             if (n == -1) {
                 printf("Error reading TCP message\n");
@@ -556,6 +558,7 @@ int main(int argc, char *argv[]) {
             }
             arguments[arg_count] = NULL;
 
+
             if(strcmp(command, "SUCC") == 0){
                 strcpy(second_succID, arguments[0]);
                 strcpy(second_succIP, arguments[1]);
@@ -570,6 +573,12 @@ int main(int argc, char *argv[]) {
                 hints.ai_socktype=SOCK_STREAM; //TCP socket
                 hints.ai_flags=AI_PASSIVE;
                 */
+
+               succFD = socket(AF_INET, SOCK_STREAM, 0);
+                if(succFD == -1){
+                    printf("Erro a criar a socket TCP\n");
+                    exit(1);
+                }
                 
                 //Fechar conecção e conectar a arguments[1] arguments[2]
                 n=getaddrinfo(arguments[1], arguments[2], &hints, &res);
