@@ -460,7 +460,7 @@ int main(int argc, char *argv[]) {
             if (n== -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
-            }
+            } 
             buffer[n] = '\0';
 
             printf("Received via TCP fd\n");
@@ -527,13 +527,28 @@ int main(int argc, char *argv[]) {
                 }
 
 
+                if(predFD != -1){
+                    close(predFD);
+                    predFD = -1;
+                }
                 predFD = fd;
             }
+
+            
+
+            
 
             if (strcmp(command, "PRED") == 0) {
                 predFD = fd;
                 strcpy(predID, arguments[0]);
             }
+
+        }
+
+        if (FD_ISSET(predFD,&read_fds)){
+            
+
+
 
         }
 
@@ -544,7 +559,29 @@ int main(int argc, char *argv[]) {
             if (n == -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
+            }else if(n == 0){ // Sucessor saiu
+                errcode = getaddrinfo(second_succIP, second_succTCP, &hints, &succ_res);
+                if (errcode !=0) {
+                    printf("Erro a procurar o sucessor\n");
+                    exit(1);
+                }
+
+                succFD = socket(AF_INET, SOCK_STREAM, 0);
+                if (succFD == -1) {
+                    printf("Erro a criar a socket TCP\n");
+                    exit(1);
+                }
+
+                n = connect(succFD, res->ai_addr,  res->ai_addrlen);
+                if(n==-1) {
+                    printf("Erro a estabelecer ligação");
+                    exit(1);
+                }
+
+                pred_command(succFD,ID);
+                succ_command(predFD, succID, succIP, succTCP);
             }
+
             buffer[n] = '\0'; //Experimentar
 
             write(1, buffer, n);
@@ -599,6 +636,7 @@ int main(int argc, char *argv[]) {
                 if (predFD != -1) {
                     succ_command(predFD, arguments[0], arguments[1], arguments[2]);
                 }
+                
             }
 
         }
