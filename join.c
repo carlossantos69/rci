@@ -11,6 +11,13 @@
 
 
 int join_command(char* ring, char* id, int fd, struct addrinfo *info, char* IP, char* TCP) {
+    //Ver nós
+    //Escolher nó
+
+
+    //direct_join()
+    //register
+
 
     get_nodeslist(fd, info, ring);
     reg_node(fd,info, ring, id, IP, TCP);
@@ -53,13 +60,4 @@ int direct_join(char* ID, char* IP, char* TCP, char* succIP, char* succTCP, stru
     entry_command(fd, ID, IP, TCP);
 
     return fd;
-}
-
-int leave_command(char* ring, char* id, int fd, struct addrinfo *info, char* IP, char* TCP){
-
-    unreg_node(fd, info, ring, id);
-
-    printf("Nó retirado da rede de nós\n");
-
-    return 0;
 }
