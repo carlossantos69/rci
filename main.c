@@ -198,6 +198,7 @@ int main(int argc, char *argv[]) {
 
                     if (registado) {
                         unreg_node(fd_UDP, TEJO_res, ring, ID);
+                        inRing = false;
                     }
                    
                 } else {
@@ -494,10 +495,6 @@ int main(int argc, char *argv[]) {
                 predFD = fd;
                 strcpy(predID, arguments[0]);
 
-                //Se flag entao:
-                //Mandar succ para traz
-                //succ_command(predFD, succID, succIP, succTCP);
-
                 if(SendSuccOnPred){
                     succ_command(predFD, succID, succIP, succTCP);
                 }
@@ -612,7 +609,7 @@ int main(int argc, char *argv[]) {
             if (n == -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
-            } else if ( n == 0) {
+            } else if (n == 0) {
                 //Meter a flag
                 SendSuccOnPred = true;
                 close(predFD);
