@@ -45,10 +45,11 @@ int main(int argc, char *argv[]) {
     char *command;
     char *arguments[MAX_NODE_COUNT*3];
     ssize_t n;
-    struct addrinfo hints, *res, *TEJO_res, *succ_res;
+    struct addrinfo hints, *res, *TEJO_res;
     socklen_t addrlen;
     struct sockaddr_in addr;
     fd_set read_fds;
+    bool SendSuccOnPred = false; 
 
     char ring[4];
 
@@ -116,7 +117,6 @@ int main(int argc, char *argv[]) {
 
     errcode=getaddrinfo(regIP,regUDP,&hints,&TEJO_res);
 
-
     //Socket TCP
     fd_TCP = socket(AF_INET, SOCK_STREAM, 0);
     if (fd_TCP == -1) {
@@ -141,6 +141,7 @@ int main(int argc, char *argv[]) {
         printf("Erro a dar bind UDP\n");
         exit(1);
     }
+    freeaddrinfo(res);
 
     if (listen(fd_TCP, 5) == -1) {
         perror("listen");
@@ -152,15 +153,18 @@ int main(int argc, char *argv[]) {
 
         FD_SET(STDIN_FILENO, &read_fds); 
         FD_SET(fd_TCP, &read_fds); 
-        FD_SET(fd_UDP, &read_fds);
 
-        maxfd = MAX(STDIN_FILENO, fd_UDP);
-        maxfd = MAX(maxfd, fd_TCP);
+        maxfd = MAX(STDIN_FILENO, fd_TCP);
 
+        //Só meter se tiver inicializado
         if (succFD != -1) {
             FD_SET(succFD, &read_fds); 
             maxfd = MAX(maxfd, succFD);
-        } //Só meter se tiver inicializado
+        }
+        if(predFD != -1){            
+            FD_SET(predFD, &read_fds); 
+            maxfd = MAX(maxfd, predFD);
+        }
 
         counter = select(maxfd+1, &read_fds, NULL, NULL, NULL);
         if (counter == -1) {
@@ -181,8 +185,15 @@ int main(int argc, char *argv[]) {
             arguments[arg_count] = NULL;
 
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
-            
                 if (arg_count == 0 && registado) {
+                    if (predFD != -1) {
+                        close(predFD);
+                        predFD = -1;
+                    }
+                    if (succFD != -1) {
+                        close(succFD);
+                        succFD = -1;
+                    }
                     leave_command(ring, ID, fd_UDP, TEJO_res , IP, TCP);
                     addrlen = sizeof(addr);
                     n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
@@ -204,6 +215,13 @@ int main(int argc, char *argv[]) {
             }
 
             if (strcmp(command,"exit") == 0 || strcmp(command, "x") == 0) {
+                if (predFD != -1) {
+                    close(predFD);
+                }
+                if (succFD != -1) {
+                    close(succFD);
+                }
+                leave_command(ring, ID, fd_UDP, TEJO_res , IP, TCP);
                 break;
             }
 
@@ -268,6 +286,7 @@ int main(int argc, char *argv[]) {
                             }
 
                             if (nodes_number > 0) {
+                                //Escolhe o primeiro nó da lista
                                 strcpy(succID, arguments[0]);
                                 strcpy(succIP, arguments[1]);
                                 strcpy(succTCP, arguments[2]);
@@ -293,18 +312,18 @@ int main(int argc, char *argv[]) {
                                 exit(1);
                             }
 
-
-                            errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
+                            errcode = getaddrinfo(succIP, succTCP, &hints, &res);
                             if(errcode != 0) {
                                 printf("Error searching sucessor IP\n");
                                 exit(1);
                             }
 
-                            n = connect(succFD, succ_res->ai_addr,  succ_res->ai_addrlen);
+                            n = connect(succFD, res->ai_addr,  res->ai_addrlen);
                             if(n==-1) {
                                 printf("Erro a estabelecer ligação");
                                 exit(1);
                             }
+                            freeaddrinfo(res);
                             entry_command(succFD, ID, IP, TCP);
                         }
 
@@ -319,10 +338,10 @@ int main(int argc, char *argv[]) {
 
                         if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
                             registado = true;
+                            printf("Registado\n");
                         }else{
                             exit(1);
                         }
-
                     }
                 } else {
                     printf("Sintax error\n");
@@ -337,43 +356,7 @@ int main(int argc, char *argv[]) {
                     strcpy(succTCP, arguments[3]);
 
 
-                    if(strcmp(succIP, IP) == 0 && strcmp(succTCP, TCP) == 0){
-                        printf("Primeiro nó a juntar-se, não se conecta a si mesmo.\n");
-                    }
-
-                    errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
-                    if (errcode !=0) {
-                        printf("Erro a procurar o sucessor\n");
-                        exit(1);
-                    }
-
-                    succFD = socket(AF_INET, SOCK_STREAM, 0);
-                    if (succFD == -1) {
-                        printf("Erro a criar a socket TCP\n");
-                        exit(1);
-                    }
-
-                    n = connect(succFD, res->ai_addr,  res->ai_addrlen);
-                    if(n==-1) {
-                        printf("Erro a estabelecer ligação");
-                        exit(1);
-                    }
-
-                    entry_command(succFD, succID, succIP, succTCP);
-
-                    addrlen = sizeof(addr);
-                    if ((fd = accept(fd_TCP, (struct sockaddr*) &addr, &addrlen)) == -1) {
-                        printf("Error accepting TCP connection\n");
-                        exit(1);
-                    }
-
-                    n = read(fd, buffer, BUFFER_SIZE);
-                    if (n== -1) {
-                        printf("Error reading TCP message\n");
-                        exit(1);
-                    }
-                    printf("Received via TCP fd\n");
-                    write(1, buffer, n);
+                    succFD = direct_join(ID, IP, TCP, succIP, succTCP, &hints);
 
                 } else {
                     printf("Sintax error\n"); 
@@ -389,12 +372,10 @@ int main(int argc, char *argv[]) {
                         strcpy(succIP, arguments[3]);
                         strcpy(succTCP, arguments[4]);
 
-                        //if(strcmp(succIP, IP) == 0 && strcmp(succTCP, TCP) == 0){
-                        //printf("Primeiro nó a juntar-se, não se conecta a si mesmo.\n");
-                        //}
+                        succFD = direct_join(ID, IP, TCP, succIP, succTCP, &hints);
                     }
 
-                    errcode = getaddrinfo(succIP, succTCP, &hints, &succ_res);
+                    errcode = getaddrinfo(succIP, succTCP, &hints, &res);
                     if(errcode !=0){
                         printf("Erro a procurar o sucessor\n");
                         exit(1);
@@ -411,6 +392,7 @@ int main(int argc, char *argv[]) {
                         printf("Erro a estabelecer ligação");
                         exit(1);
                     }
+                    freeaddrinfo(res);
 
                     entry_command(succFD,succID, succIP, succTCP);
                     
@@ -450,12 +432,13 @@ int main(int argc, char *argv[]) {
 
         }
         if (FD_ISSET(fd_TCP,&read_fds)) {
+
             addrlen = sizeof(addr);
             if ((fd = accept(fd_TCP, (struct sockaddr*) &addr, &addrlen)) == -1) {
                 printf("Error accepting TCP connection\n");
                 exit(1);
             }
-
+            
             n = read(fd, buffer, BUFFER_SIZE);
             if (n== -1) {
                 printf("Error reading TCP message\n");
@@ -480,7 +463,6 @@ int main(int argc, char *argv[]) {
                 strcpy(predID, arguments[0]);
 
                 if (strcmp(ID, succID) == 0) {
-                    //Segundo nó a entrar
                     strcpy(second_succID, ID);
                     strcpy(second_succIP, IP);
                     strcpy(second_succTCP, TCP);
@@ -494,34 +476,32 @@ int main(int argc, char *argv[]) {
                         exit(1);
                     }
 
-                    errcode = getaddrinfo(arguments[1], arguments[2], &hints, &succ_res);
+                    errcode = getaddrinfo(arguments[1], arguments[2], &hints, &res);
                     if(errcode != 0) {
                         printf("Error a procurar IP do novo nó\n");
                         exit(1);
                     }
 
-                    n = connect(succFD, succ_res->ai_addr,  succ_res->ai_addrlen);
+                    n = connect(succFD, res->ai_addr,  res->ai_addrlen);
                     if(n==-1) {
                         printf("Erro a estabelecer ligação com o novo nó");
                         exit(1);
                     }
+                    freeaddrinfo(res);
 
-                    pred_command(succFD, ID);
                     succ_command(fd, arguments[0], arguments[1], arguments[2]);
+                    pred_command(succFD, ID);
 
                 } else if (strcmp(ID, second_succID) == 0) {
-                    //Terceiro nó a entrar
-                    printf("DEBUG: Terceiro nó entra\n");
                     strcpy(second_succID, arguments[0]);
                     strcpy(second_succIP, arguments[1]);
                     strcpy(second_succTCP, arguments[2]);
 
                     entry_command(predFD, arguments[0], arguments[1], arguments[2]);
                     succ_command(fd, succID, succIP, succTCP);
+
                     
                 } else {
-                    //Outros casos
-                    printf("DEBUG: Nó entra\n");
                     entry_command(predFD, arguments[0], arguments[1], arguments[2]);
                     succ_command(fd, succID, succIP, succTCP);
                 }
@@ -532,25 +512,27 @@ int main(int argc, char *argv[]) {
                     predFD = -1;
                 }
                 predFD = fd;
-            }
-
-            
-
-            
+            }            
 
             if (strcmp(command, "PRED") == 0) {
+                if (predFD != -1) {
+                    close(predFD);
+                }
                 predFD = fd;
                 strcpy(predID, arguments[0]);
+
+                //Se flag entao:
+                //Mandar succ para traz
+                //succ_command(predFD, succID, succIP, succTCP);
+
+                if(SendSuccOnPred){
+                    succ_command(predFD, succID, succIP, succTCP);
+                }
+                SendSuccOnPred = false;                
             }
 
         }
 
-        if (FD_ISSET(predFD,&read_fds)){
-            
-
-
-
-        }
 
         if (FD_ISSET(succFD, &read_fds)) {
             printf("Recebido do sucessor\n");
@@ -559,8 +541,15 @@ int main(int argc, char *argv[]) {
             if (n == -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
-            }else if(n == 0){ // Sucessor saiu
-                errcode = getaddrinfo(second_succIP, second_succTCP, &hints, &succ_res);
+            } else if(n == 0) { // Sucessor saiu
+                close(succFD);
+
+                strcpy(succID, second_succID);
+                strcpy(succIP, second_succIP);
+                strcpy(succTCP, second_succTCP);
+
+
+                errcode = getaddrinfo(second_succIP, second_succTCP, &hints, &res);
                 if (errcode !=0) {
                     printf("Erro a procurar o sucessor\n");
                     exit(1);
@@ -577,74 +566,106 @@ int main(int argc, char *argv[]) {
                     printf("Erro a estabelecer ligação");
                     exit(1);
                 }
+                freeaddrinfo(res);
 
-                pred_command(succFD,ID);
+                pred_command(succFD, ID);
                 succ_command(predFD, succID, succIP, succTCP);
-            }
+            } else {
 
-            buffer[n] = '\0'; //Experimentar
+                buffer[n] = '\0'; //Experimentar
 
-            write(1, buffer, n);
+                write(1, buffer, n);
 
-            command = strtok(buffer, " \t\n");
-            arg_count = 0;
-            char *token;
-            while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                arguments[arg_count] = token;
-                arg_count++;
-            }
-            arguments[arg_count] = NULL;
-
-
-            if(strcmp(command, "SUCC") == 0){
-                strcpy(second_succID, arguments[0]);
-                strcpy(second_succIP, arguments[1]);
-                strcpy(second_succTCP, arguments[2]);
-            }
-
-            if(strcmp(command, "ENTRY") == 0) { //Entry vindo do sucessor
-                close(succFD);
-                /*
-                memset(&hints,0,sizeof hints);
-                hints.ai_family=AF_INET; //IPv4
-                hints.ai_socktype=SOCK_STREAM; //TCP socket
-                hints.ai_flags=AI_PASSIVE;
-                */
-
-               succFD = socket(AF_INET, SOCK_STREAM, 0);
-                if(succFD == -1){
-                    printf("Erro a criar a socket TCP\n");
-                    exit(1);
+                command = strtok(buffer, " \t\n");
+                arg_count = 0;
+                char *token;
+                while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
+                    arguments[arg_count] = token;
+                    arg_count++;
                 }
-                
-                //Fechar conecção e conectar a arguments[1] arguments[2]
-                n=getaddrinfo(arguments[1], arguments[2], &hints, &res);
-                if(n!=0)/*error*/exit(1);
-
-                n=connect(succFD,res->ai_addr,res->ai_addrlen);
-                if(n==-1)/*error*/exit(1);
+                arguments[arg_count] = NULL;
 
 
-                strcpy(second_succID, succID);
-                strcpy(second_succIP, succIP);
-                strcpy(second_succTCP, succTCP);
-                strcpy(succID, arguments[0]);
-                strcpy(succIP, arguments[1]);
-                strcpy(succTCP, arguments[2]);
-
-                pred_command(succFD, ID); //Informar o nó que entrou
-                if (predFD != -1) {
-                    succ_command(predFD, arguments[0], arguments[1], arguments[2]);
+                if(strcmp(command, "SUCC") == 0){
+                    strcpy(second_succID, arguments[0]);
+                    strcpy(second_succIP, arguments[1]);
+                    strcpy(second_succTCP, arguments[2]);
                 }
-                
+
+                if(strcmp(command, "ENTRY") == 0) { //Entry vindo do sucessor
+                    
+                    if (succFD != -1) {
+                        close(succFD);
+                    }
+
+
+                    succFD = socket(AF_INET, SOCK_STREAM, 0);
+                    if(succFD == -1){
+                        printf("Erro a criar a socket TCP\n");
+                        exit(1);
+                    }
+                    
+                    //Fechar conecção e conectar a arguments[1] arguments[2]
+                    n=getaddrinfo(arguments[1], arguments[2], &hints, &res);
+                    if(n!=0)/*error*/exit(1);
+
+                    n=connect(succFD, res->ai_addr, res->ai_addrlen);
+                    if(n==-1)/*error*/exit(1);
+                    freeaddrinfo(res);
+
+
+                    strcpy(second_succID, succID);
+                    strcpy(second_succIP, succIP);
+                    strcpy(second_succTCP, succTCP);
+                    strcpy(succID, arguments[0]);
+                    strcpy(succIP, arguments[1]);
+                    strcpy(succTCP, arguments[2]);
+
+                    pred_command(succFD, ID); //Informar o nó que entrou
+                    if (predFD != -1) {
+                        succ_command(predFD, arguments[0], arguments[1], arguments[2]);
+                    }
+                    
+                }
             }
 
+        }
+
+        if (FD_ISSET(predFD, &read_fds)) {
+            printf("Recebido do predecessor\n");
+
+            n = read(predFD, buffer, BUFFER_SIZE);
+            if (n == -1) {
+                printf("Error reading TCP message\n");
+                exit(1);
+            } else if ( n == 0) {
+                //Meter a flag
+                SendSuccOnPred = true;
+                close(predFD);
+            } else {
+
+                buffer[n] = '\0'; //Experimentar
+
+                write(1, buffer, n);
+
+                command = strtok(buffer, " \t\n");
+                arg_count = 0;
+                char *token;
+                while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
+                    arguments[arg_count] = token;
+                    arg_count++;
+                }
+                arguments[arg_count] = NULL;
+
+                //Processar comando no futuro
+
+            }
+            
         }
 
     }    
 
 
-    freeaddrinfo(res);
     freeaddrinfo(TEJO_res);
     free(IP);
     free(TCP);
