@@ -4,6 +4,11 @@
         "unistd.h": "c",
         "tejo.h": "c",
         "join.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stddef.h": "c",
+        "errno.h": "c",
+        "string.h": "c",
+        "stdbool.h": "c",
+        "stdlib.h": "c"
     }
 }

@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     bool SendSuccOnPred = false; 
     bool inRing = false;
     int fd_TCP, fd_UDP, fd; //File Descriptors
-    int errcode, maxfd, counter, arg_count, nodes_number;
+    int errcode, maxfd, counter, arg_count;
 
     char ID[3];
     char *IP, *TCP, *regIP, *regUDP;
@@ -199,7 +199,10 @@ int main(int argc, char *argv[]) {
                     if (registado) {
                         unreg_node(fd_UDP, TEJO_res, ring, ID);
                         inRing = false;
+                        registado = false;
                     }
+
+                    printf("Nó saiu do anel\n");
                    
                 } else {
                     printf("Nó não registado ou erro de syntax\n");
@@ -235,91 +238,11 @@ int main(int argc, char *argv[]) {
                             exit(1);
                         }
 
-                        command = strtok(buffer, " \t\n");
-                        arg_count = 0;
-                        char *token;
-                        token = strtok(NULL, " \t\n"); //Eliminate first argument (its ring id)
-                        while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < 300) {
-                            arguments[arg_count] = token;
-                            arg_count++;
-                        }
-                        arguments[arg_count] = NULL;
-
-                        //Ver lista de nós e escolher o sucessor e o ID
-                        if (strcmp(command, "NODESLIST") == 0) {
-                            nodes_number = 0; //Nodes which are in the list
-                            bool used[100] = { false }; //ID's which are in use on the ring
-
-                            for (int i=0; i<arg_count-1; i=i+3) {
-                                int id = atoi(arguments[i]);
-                                if (id >= 0 && id < 100) { // Check bounds before accessing used array
-                                    used[id] = true;
-                                    nodes_number++;
-                                } else {
-                                    printf("ID inválido: %s\n", ID);
-                                    // Decide what to do if ID is invalid, such as exiting the loop or handling the error
-                                }
-                            }
-                            
-
-                            if (used[atoi(ID)]) {
-                                printf("%s já está a ser usado. ", ID);
-                                for (int i=0; i<100; ++i) {
-                                    if (!used[i]) {
-                                        sprintf(buffer, "%d", i);
-                                        strcpy(ID, buffer);
-                                        if (strlen(ID) == 1) {
-                                            ID[1] = ID[0];
-                                            ID[0] = '0';
-                                            ID[2] = '\0';
-                                        }
-                                        break;
-                                    }
-                                }
-                                printf("%s vai ser usado\n", ID);
-                            }
-
-                            if (nodes_number > 0) {
-                                //Escolhe o primeiro nó da lista
-                                strcpy(succID, arguments[0]);
-                                strcpy(succIP, arguments[1]);
-                                strcpy(succTCP, arguments[2]);
-                            } else { // primeiro no
-                                strcpy(succID, ID);
-                                strcpy(succIP, IP);
-                                strcpy(succTCP, TCP);
-                                strcpy(second_succID, ID);
-                                strcpy(second_succIP, IP);
-                                strcpy(second_succTCP, TCP);
-                                strcpy(predID, ID);
-                            }
-                        }
-
+                        succFD = join_command(arguments, buffer, ring, fd_UDP, TEJO_res, ID, IP, TCP, succID, succIP, succTCP, second_succID, second_succIP, second_succTCP, predID, &registado);
 
                         //Entrar no anél e mandar comando para sucessor
-                        if(nodes_number == 0){
-                            printf("Primeiro nó a juntar-se.\n");
-                        } else {
-                            succFD = direct_join(ID, IP, TCP, succIP, succTCP, &hints);
-                        }
 
                         inRing = true;
-
-                        //Registar no anél
-                        reg_node(fd_UDP, TEJO_res , ring, ID, IP, TCP);
-                        addrlen = sizeof(addr);
-                        n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-                        if (n == -1) {
-                            printf("Erro a ler do socket UDP\n");
-                            exit(1);
-                        }
-
-                        if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
-                            registado = true;
-                            printf("Registado\n");
-                        }else{
-                            exit(1);
-                        }
                     }
                 } else {
                     printf("Sintax error\n");
@@ -414,10 +337,11 @@ int main(int argc, char *argv[]) {
             }
             
             n = read(fd, buffer, BUFFER_SIZE);
+            
             if (n== -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
-            } 
+            }
             buffer[n] = '\0';
 
             printf("Received via TCP fd\n");
@@ -509,7 +433,7 @@ int main(int argc, char *argv[]) {
 
             n = read(succFD, buffer, BUFFER_SIZE);
             if (n == -1) {
-                printf("Error reading TCP message\n");
+                printf("Error reading TCP message sucessor\n");
                 exit(1);
             } else if(n == 0) { // Sucessor saiu
                 close(succFD);
