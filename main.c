@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
     bool inRing = false;
     int fd_TCP, fd_UDP, fd; //File Descriptors
     int errcode, maxfd, counter, arg_count;
-    char* routing_table[TABLE_SIZE][TABLE_SIZE];
-    char* shortpath_table[TABLE_SIZE];
+    char* forwarding_table[TABLE_SIZE][TABLE_SIZE];
+    char* shortest_table[TABLE_SIZE];
     char* expedition_table[TABLE_SIZE];
 
     char ID[3];

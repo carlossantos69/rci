@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#define TABLE_SIZE 100
+
 int entry_command(int fd,char* id, char* IP, char* TCP){
     char *message = (char*) malloc(strlen("ENTRY") + strlen(id) + strlen(IP) + strlen(TCP)+ 5);
 
@@ -68,4 +70,25 @@ int pred_command(int fd, char* id){
 
     return 0;
 
+}
+
+int route_command(int fd, char* i, char* n, char* path) {
+    //Form message
+    char *message = (char*) malloc(strlen("ROUTE") + strlen(i) + strlen(n) + strlen(path) + 6);
+    if (message == NULL) {
+        return 1;
+    }
+    strcpy(message, "ROUTE ");
+    strcat(message, i);
+    strcat(message, " ");
+    strcat(message, i);
+    strcat(message, " ");
+    strcat(message, path);
+    strcat(message, "\n");
+
+    //Send message via TCP
+    write(fd, message, strlen(message));
+    free(message);
+
+    return 0;
 }

@@ -9,6 +9,8 @@
         "errno.h": "c",
         "string.h": "c",
         "stdbool.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "socket.h": "c",
+        "route.h": "c"
     }
 }
