@@ -15,6 +15,7 @@ cor
 *.ilk
 *.map
 *.exp
+*.html
 
 # Precompiled Headers
 *.gch
