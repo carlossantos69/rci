@@ -16,6 +16,8 @@
 
 #define MAX(A,B) ((A)>=(B)?(A):(B))
 
+#define TABLE_SIZE 100
+
 //Servidor TEJO
 #define TEJO_IP "193.136.138.142"
 #define TEJO_UDP "59000"
@@ -34,6 +36,9 @@ int main(int argc, char *argv[]) {
     bool inRing = false;
     int fd_TCP, fd_UDP, fd; //File Descriptors
     int errcode, maxfd, counter, arg_count;
+    char* routing_table[TABLE_SIZE][TABLE_SIZE];
+    char* shortpath_table[TABLE_SIZE];
+    char* expedition_table[TABLE_SIZE];
 
     char ID[3];
     char *IP, *TCP, *regIP, *regUDP;
