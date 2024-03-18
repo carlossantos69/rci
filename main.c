@@ -198,10 +198,18 @@ int main(int argc, char *argv[]) {
 
                     if (registado) {
                         unreg_node(fd_UDP, TEJO_res, ring, ID);
-                        inRing = false;
-                        registado = false;
+                        addrlen = sizeof(addr);
+                        int n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+                        if (n == -1) {
+                            printf("Erro a ler do socket UDP\n");
+                            exit(1);
+                        }
+                        
                     }
 
+                    inRing = false;
+                    registado = false;
+                    
                     printf("Nó saiu do anel\n");
                    
                 } else {
@@ -237,10 +245,8 @@ int main(int argc, char *argv[]) {
                             printf("Erro a ler do socket UDP\n");
                             exit(1);
                         }
-
+                        //Entrar no anél registando se no servidor de nós
                         succFD = join_command(arguments, buffer, ring, fd_UDP, TEJO_res, ID, IP, TCP, succID, succIP, succTCP, second_succID, second_succIP, second_succTCP, predID, &registado);
-
-                        //Entrar no anél e mandar comando para sucessor
 
                         inRing = true;
                     }

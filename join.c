@@ -18,10 +18,9 @@
 
 
 int join_command(char** arguments, char* buffer, char* ring, int fd_UDP, struct addrinfo *TEJO_res, char* ID, char* IP, char* TCP, char* succID, char* succIP, char* succTCP, char* second_succID, char* second_succIP, char* second_succTCP, char* predID, bool *registado) {
-    //Ver nós
-    //Escolher nó
+
     char* command;
-    int nodes_number = 0, succFD;
+    int nodes_number, succFD;
     socklen_t addrlen;
     struct sockaddr_in addr;
     
@@ -52,12 +51,13 @@ int join_command(char** arguments, char* buffer, char* ring, int fd_UDP, struct 
             if (id >= 0 && id < 100) { // Check bounds before accessing used array
                 used[id] = true;
                 nodes_number++;
+                printf("There are %d nodes\n", nodes_number);
             } else {
                 printf("ID inválido: %s\n", ID);
                 // Decide what to do if ID is invalid, such as exiting the loop or handling the error
             }
         }
-        
+
 
         if (used[atoi(ID)]) {
             printf("%s já está a ser usado. ", ID);
@@ -90,34 +90,48 @@ int join_command(char** arguments, char* buffer, char* ring, int fd_UDP, struct 
             strcpy(second_succTCP, TCP);
             strcpy(predID, ID);
         }
-
-
-
     }
 
     if(nodes_number == 0){
         printf("Primeiro nó a juntar-se.\n");
-    } else {
+        reg_node(fd_UDP,TEJO_res, ring, ID, IP, TCP);
+
+        addrlen = sizeof(addr);
+        int n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+        if (n == -1) {
+            printf("Erro a ler do socket UDP\n");
+            exit(1);
+        }
+
+        printf("Nó registado na rede de nós\n");
+
+        if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
+            *registado = true;
+            printf("Registado primeiro nó\n");
+        }else{
+            printf("Erro na resposta do servidor\n");
+            exit(1);
+        }
+    } else{
         succFD = direct_join(ID, IP, TCP, succIP, succTCP, &hints);
+        reg_node(fd_UDP,TEJO_res, ring, ID, IP, TCP);
+
+        addrlen = sizeof(addr);
+        int n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+        if (n == -1) {
+            printf("Erro a ler do socket UDP\n");
+            exit(1);
+        }
+
+        if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
+            *registado = true;
+            printf("Registado\n");
+        }else{
+            write(1, buffer, n);
+            printf("Erro na resposta do servidor\n");
+            exit(1);
+        }
         return succFD;
-    }
-
-    reg_node(fd_UDP,TEJO_res, ring, ID, IP, TCP);
-
-    addrlen = sizeof(addr);
-    int n = recvfrom(fd_UDP, buffer, BUFFER_SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-    if (n == -1) {
-        printf("Erro a ler do socket UDP\n");
-        exit(1);
-    }
-
-    printf("Nó registado na rede de nós\n");
-
-    if(memcmp(buffer, "OKREG", strlen("OKREG"))==0){
-        *registado = true;
-        printf("Registado\n");
-    }else{
-        exit(1);
     }
 
     return -1;
