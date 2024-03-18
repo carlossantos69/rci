@@ -4,7 +4,7 @@
 
 #define TABLE_SIZE 100
 
-int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* buffer, char* j);
+int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* command, char* destination);
 
 void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, char* input);
 
@@ -14,6 +14,6 @@ void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* i
 
 void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* index1, char* index2, char* input);
 
-void expedition_tableUpdate(char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* index);
+void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* index);
 
-int shortest_tableUpdate(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char*shortest_table[TABLE_SIZE], char* index);
+int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char*shortest_table[TABLE_SIZE], char* index);

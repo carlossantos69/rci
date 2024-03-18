@@ -13,78 +13,76 @@
 
 #define TABLE_SIZE 100
 
-int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* buffer, char* j){
+int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* command, char* destination){
+    char* origin, *final_dest, *path, *new_path;
+    bool is_valid_command = true;
+    bool has_changes = false;
 
-    char* token, *i, *n, *path, *result;
-    bool isValid = true;
-    bool isChanged = false;
-
-
-    token = strtok(buffer, " ");
+    // Extracting the command details
+    char* token = strtok(command, " ");
     token = strtok(NULL, " ");
-
-    //Divide i n, 𝜙 in different strings
-    i = strdup(token);
+    origin = strdup(token);
     token = strtok(NULL, " ");
-    n = strdup(token);
+    final_dest = strdup(token);
     token = strtok(NULL, " ");
     path = strdup(token);
 
-    printf("Debug: i:%s n:%s j:%s\n", i, n, j);
-    printf("DEBUG: Path: %s\n", path);
+    printf("Origin: %s | Final Destination: %s | Destination: %s\n", origin, final_dest, destination);
+    printf("Path: %s\n", path);
 
-    if (strncmp(i, path, 2) != 0) {
-        isValid = false;
-        printf(" [ERROR]: Invalid ROUTE command, i != path start, ignoring\n");
+    // Checking command validity
+    if (strncmp(origin, path, 2) != 0) {
+        is_valid_command = false;
+        printf("Invalid ROUTE command. Origin mismatch. Ignoring.\n");
     }
-    if (n[0] != path[strlen(path)-2] || n[1] != path[strlen(path)-1]) {
-        isValid = false;
-        printf(" [ERROR]: Invalid ROUTE command, n != path end, ignoring\n");
+    if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) - 1]) {
+        is_valid_command = false;
+        printf("Invalid ROUTE command. Final destination mismatch. Ignoring.\n");
     }
-    token = strtok(token, "-");
+
+    // Checking if the given destination is not already in the path
+    token = strtok(path, "-");
     while (token != NULL) {
-        // Compare each part with the given string
-        printf("Comparing %s : %s\n", token, j);
-        if (strcmp(token, j) == 0) {
-            isValid = false;
+        printf("Comparing %s : %s\n", token, destination);
+        if (strcmp(token, destination) == 0) {
+            is_valid_command = false;
             break;
         }
         token = strtok(NULL, "-");
     }
 
-    
-    //Se j não é um nó de sigma, caminho de j para n atravez de i é: concatenacao de j com sigma, j-sigma
-    if (isValid) {
-        printf("Debug: Valid path\n");
+    // Processing valid command
+    if (is_valid_command) {
+        printf("Valid route.\n");
 
-        //concatenação de 𝑗 com 𝜙 (𝑗−𝜙)
-        result = (char*) malloc(strlen(j) + strlen("-") + strlen(path) + 2);
-        if (result == NULL) {
-            printf("Error allocating memory for path");
+        // Constructing new path
+        new_path = (char*)malloc(strlen(destination) + strlen("-") + strlen(path) + 2);
+        if (new_path == NULL) {
+            printf("Memory allocation error for path");
             exit(1);
         }
-        strcpy(result, j);
-        strcat(result, "-");
-        strcat(result, path);
+        strcpy(new_path, destination);
+        strcat(new_path, "-");
+        strcat(new_path, path);
 
-        forwarding_tableChange(forwarding_table, n, i, result);
-        if (shortest_tableUpdate(forwarding_table, shortest_table, n)) {
-            isChanged = true;
-            expedition_tableUpdate(shortest_table, expedition_table, n);
+        forwarding_tableChange(forwarding_table, final_dest, origin, new_path);
+        if (refreshShortestTable(forwarding_table, shortest_table, final_dest)) {
+            has_changes = true;
+            refreshExpeditionTable(shortest_table, expedition_table, final_dest);
         }
-        free(result);
+        free(new_path);
     } else {
-        printf("Debug: Invalid path\n");
+        printf("Invalid route.\n");
     }
 
-    free(i);
-    free(n);
+    free(origin);
+    free(final_dest);
     free(path);
-    return(isChanged);
+    return has_changes;
 }
 
 
-int shortest_tableUpdate(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* index) {
+int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* index) {
     int i = atoi(index);
     bool updated = false;
     bool forwarding_tableNULL = true;
@@ -140,7 +138,7 @@ int shortest_tableUpdate(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
 }
 
 
-void expedition_tableUpdate(char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* index) {
+void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* index) {
     int i = atoi(index);
 
     if (strlen(shortest_table[i]) == 2) {

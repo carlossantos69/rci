@@ -11,6 +11,7 @@
         "stdbool.h": "c",
         "stdlib.h": "c",
         "socket.h": "c",
-        "route.h": "c"
+        "route.h": "c",
+        "netdb.h": "c"
     }
 }
