@@ -18,6 +18,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     bool is_valid_command = true;
     bool has_changes = false;
 
+    printf("COMANDO: %s", command);
 
     // Extracting the command details
     char* token = strtok(command, " ");

@@ -466,6 +466,22 @@ int main(int argc, char *argv[]) {
                 }
                 SendSuccOnPred = false;                
             }
+            
+            if (strcmp(command, "ROUTE") == 0){
+                if(RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)){
+                    n = atoi(arguments[1]);
+                    if(succFD != -1){
+                        route_command(succFD, ID, arguments[1], shortest_table[n] );
+                        printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
+                    }
+
+                    if(predFD != -1){
+                        route_command(predFD, ID, arguments[1], shortest_table[n] );
+                        printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
+                    }
+                }
+
+            }
 
         }
 
@@ -588,35 +604,50 @@ int main(int argc, char *argv[]) {
                 predFD = -1;
             } else {
 
-                buffer[n] = '\0'; //Experimentar
-
-                write(1, buffer, n);
-
-                command = strtok(buffer, " \t\n");
-                arg_count = 0;
                 char *token;
+                char *temp_buffer = strdup(buffer);
+                token = strtok(buffer, " \t\n");
+                command = strdup(token);
+                
+                arg_count = 0;
+
                 while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                    arguments[arg_count] = token;
+                    arguments[arg_count] = strdup(token);
                     arg_count++;
                 }
                 arguments[arg_count] = NULL;
 
+                for(int i=0; i<arg_count; i++){
+                    printf("Printing argument %d: %s\n", i, arguments[i]);
+                }
+
+                strcpy(buffer, temp_buffer);
+                free(temp_buffer);
+                    
+
+
+                printf("COMANDO %s\n", command);
+
                 //Processar comando no futuro
                 if (strcmp(command,"ROUTE") == 0) { //Received route command
                     //TODO: finish code
+                    printf("BUFFER: %s\n", buffer);
                     if (RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)) {
                         n = atoi(arguments[1]);
                         if (predFD != -1) {
                             //Send ROUTE to predecessor
                             route_command(predFD, ID, arguments[1], shortest_table[n]);
+                            printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
                         }
                         if (succFD != -1) {
                             //Send ROUTE to sucessor
-                            route_command(predFD, ID, arguments[1], shortest_table[n]);
+                            route_command(succFD, ID, arguments[1], shortest_table[n]);
+                            printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
                         }
                         //TODO: send to chords
                     }
 
+                    free(command);
             }
             
         }
@@ -626,7 +657,7 @@ int main(int argc, char *argv[]) {
 
 }
     freeaddrinfo(TEJO_res);
-    freeTables(forwarding_table, shortest_table, expedition_table);
+    //freeTables(forwarding_table, shortest_table, expedition_table);
     free(IP);
     free(TCP);
     free(regIP);

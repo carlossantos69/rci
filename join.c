@@ -1,6 +1,7 @@
 #include "join.h"
 #include "tejo.h"
 #include "tcp.h"
+#include "route.h"
 
 #include <sys/types.h>
 #include <stddef.h>
@@ -169,6 +170,7 @@ int direct_join(char* ID, char* IP, char* TCP, char* succIP, char* succTCP, stru
     
 
     entry_command(fd, ID, IP, TCP);
+    route_command(fd, ID, ID, ID);
 
     return fd;
 }
