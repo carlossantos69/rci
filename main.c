@@ -246,6 +246,7 @@ int main(int argc, char *argv[]) {
                 if (registado) {
                     unreg_node(fd_UDP, TEJO_res, ring, ID);
                 }
+                free(command);
                 break;
             }
             else if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0 ) { //join (j) ring id
@@ -630,6 +631,7 @@ int main(int argc, char *argv[]) {
 
 
     freeaddrinfo(TEJO_res);
+    freeTables(forwarding_table, shortest_table, expedition_table);
     free(IP);
     free(TCP);
     free(regIP);

@@ -48,7 +48,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     // Checking if the given destination is not already in the path
     token = strtok(path, "-");
     while (token != NULL) {
-        printf("Comparing %s : %s\n", token, destination);
+        //printf("Comparing %s : %s\n", token, destination);
         if (strcmp(token, destination) == 0) {
             is_valid_command = false;
             break;
@@ -101,7 +101,7 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
             if (forwarding_table[i][j] != NULL) {
                 shortest_tableChange(shortest_table, index, forwarding_table[i][j]);
                 updated = true;
-                printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
+                //printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
                 break;
             }
         }
@@ -159,7 +159,7 @@ void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_t
         dest[0] = path[3];
         dest[1] = path[4];
 
-        printf("Last destination: %s\n", dest);
+        //printf("Last destination: %s\n", dest);
 
         // Update the expedition_table with the last destination
         expedition_tableChange(expedition_table, index, dest);
@@ -189,7 +189,7 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
 void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* input) {
     int i = atoi(index);
 
-    printf("PRINTING INPUT: %s\n", input);
+    //printf("PRINTING INPUT: %s\n", input);
 
     if (shortest_table[i] != NULL) {
         free(shortest_table[i]);
