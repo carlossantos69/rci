@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <stdbool.h>
 
 #define TABLE_SIZE 100
 
@@ -92,3 +93,63 @@ int route_command(int fd, char* i, char* n, char* path) {
 
     return 0;
 }
+
+void print_forwardingTable(char* forwardingTable[TABLE_SIZE][TABLE_SIZE], char* destination){
+
+    int dest_index = atoi(destination);
+    bool is_empty = true;
+
+    printf("Routing to %s\n", destination);
+
+    for (int i = 0; i < TABLE_SIZE; ++i) {
+        char* next_hop = forwardingTable[dest_index][i];
+        if (next_hop != NULL) {
+            is_empty = false;
+            printf("  %03d : %s\n", i, next_hop); // Use %03d to print leading zeros
+        }
+    }
+
+    if (is_empty) {
+        printf("Table is empty\n");
+    }
+}
+
+void print_shortestTable(char* shortestTable[TABLE_SIZE], char*destination){
+    int dest_index = atoi(destination);
+    printf("\nPath to %s: ", destination);
+    if (shortestTable[dest_index] == NULL) {
+        printf(" - \n");
+    } else {
+        printf("%s\n", shortestTable[dest_index]);
+    }
+
+}
+
+void print_expeditionTable(char* expedition_table[TABLE_SIZE]) {
+    char index_str[4]; // Allocate space for 3 digits and null terminator
+    bool printed = false;
+
+    printf("Forwarding: source | destination\n");
+
+    for (int i = 0; i < TABLE_SIZE; ++i) {
+        if (expedition_table[i] != NULL) {
+            // Convert integer index to string
+            if (i < 10) {
+                sprintf(index_str, "00%d", i); // Pad with two leading zeros
+            } else if (i < 100) {
+                sprintf(index_str, "0%d", i); // Pad with one leading zero
+            } else {
+                sprintf(index_str, "%d", i); // No leading zeros needed
+            }
+
+            // Print source and next hop
+            printf("          %s | %s\n", index_str, expedition_table[i]);
+            printed = true;
+        }
+    }
+    if (!printed) {
+        printf("No forwarding entries found.");
+    }
+    printf("\n");
+}
+

@@ -332,6 +332,30 @@ int main(int argc, char *argv[]) {
                     
             }
 
+            else if (strcmp(command, "show") == 0 && strcmp(arguments[0], "routing")== 0 ){
+                if (arg_count == 2 && strlen(arguments[1]) == 2) {
+                    print_forwardingTable(forwarding_table, arguments[1]);
+                    } else {
+                            printf("Syntax error: show routing (st) dest\n");
+                }
+            }
+
+            else if (strcmp(command, "show") == 0 && strcmp(arguments[0], "path") == 0){
+                if (arg_count == 2 && strlen(arguments[1]) == 2) {
+                    print_shortestTable(shortest_table, arguments[1]);
+                } else {
+                    printf("Syntax error: show path (sp) dest\n");
+                }
+            }
+
+            else if (strcmp(command, "show") == 0 && strcmp(arguments[0], "forwarding") == 0) {
+                if (arg_count == 1) {
+                    print_expeditionTable(expedition_table);
+                } else {
+                    printf("Syntax error: show forwarding (sf)\n");
+                }
+            }
+
             else if(strcmp(command, "st")== 0){       
                 printf("Showing Topology: \n");   
                 if(inRing){
@@ -363,6 +387,22 @@ int main(int argc, char *argv[]) {
                     //TODO: send to chords
                 }
             }
+            else if (strcmp(command, "sr") == 0) { // Show Routing
+                if (arg_count == 1 && strlen(arguments[0]) == 2) {
+                    print_forwardingTable(forwarding_table, arguments[0]);
+                } else {
+                    printf("Syntax error: show routing (sr) dest\n");
+                }
+            } else if (strcmp(command, "sp") == 0) { // Show Path
+                if (arg_count == 1 && strlen(arguments[0]) == 2) {
+                    print_shortestTable(shortest_table, arguments[0]);
+                } else {
+                    printf("Syntax error: show path (sp) dest\n");
+                }
+            } else if (strcmp(command, "sf") == 0) { // Show Forwarding
+                print_expeditionTable(expedition_table);
+            }
+
             else{
                 printf("Syntax error or command not found\n");
                 print_help();
@@ -377,26 +417,38 @@ int main(int argc, char *argv[]) {
                 printf("Error accepting TCP connection\n");
                 exit(1);
             }
-            
+
+              for(int i=0; i<sizeof(buffer); i++){
+                    buffer[i] = '\0';
+            }
+
             n = read(fd, buffer, BUFFER_SIZE);
             
             if (n== -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
             }
-            buffer[n] = '\0';
 
             printf("Received via TCP fd\n");
             write(1, buffer, n);
 
-            command = strtok(buffer, " \t\n");
-            arg_count = 0;
             char *token;
+            char *temp_buffer = strdup(buffer);
+            token = strtok(buffer, " \t\n");
+            command = strdup(token);
+            
+            arg_count = 0;
+
             while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                arguments[arg_count] = token;
+                arguments[arg_count] = strdup(token);
                 arg_count++;
             }
             arguments[arg_count] = NULL;
+
+            strcpy(buffer, temp_buffer);
+            free(temp_buffer);
+
+            buffer[n] = '\0';
 
             if (strcmp(command, "ENTRY") == 0) {
                 
@@ -483,11 +535,19 @@ int main(int argc, char *argv[]) {
 
             }
 
+            for(int i=0; i<arg_count; i++){
+                buffer[i] = '\0';
+            }
+
         }
 
 
         if (FD_ISSET(succFD, &read_fds)) {
             printf("Recebido do sucessor\n");
+
+            for(int i=0; i<sizeof(buffer); i++){
+                    buffer[i] = '\0';
+            }
 
             n = read(succFD, buffer, BUFFER_SIZE);
             if (n == -1) {
@@ -589,6 +649,10 @@ int main(int argc, char *argv[]) {
 
         if (FD_ISSET(predFD, &read_fds)) {
             printf("Recebido do predecessor\n");
+
+            for(int i=0; i<sizeof(buffer); i++){
+                    buffer[i] = '\0';
+            }
 
             n = read(predFD, buffer, BUFFER_SIZE);
             if (n == -1) {

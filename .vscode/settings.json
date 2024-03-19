@@ -12,6 +12,7 @@
         "stdlib.h": "c",
         "socket.h": "c",
         "route.h": "c",
-        "netdb.h": "c"
+        "netdb.h": "c",
+        "in.h": "c"
     }
 }
