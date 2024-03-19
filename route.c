@@ -18,6 +18,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     bool is_valid_command = true;
     bool has_changes = false;
 
+
     // Extracting the command details
     char* token = strtok(command, " ");
     token = strtok(NULL, " ");
@@ -26,6 +27,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     final_dest = strdup(token);
     token = strtok(NULL, " ");
     path = strdup(token);
+    path[strlen(path)-1] = '\0';
 
     printf("Origin: %s | Final Destination: %s | Destination: %s\n", origin, final_dest, destination);
     printf("Path: %s\n", path);
@@ -35,10 +37,13 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
         is_valid_command = false;
         printf("Invalid ROUTE command. Origin mismatch. Ignoring.\n");
     }
-    if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) - 1]) {
+    if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) -1]) {
         is_valid_command = false;
         printf("Invalid ROUTE command. Final destination mismatch. Ignoring.\n");
     }
+    
+    char original_path[sizeof(path)]; // Create a copy of the original path
+    strcpy(original_path, path);
 
     // Checking if the given destination is not already in the path
     token = strtok(path, "-");
@@ -50,6 +55,8 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
         }
         token = strtok(NULL, "-");
     }
+
+    strcpy(path, original_path);
 
     // Processing valid command
     if (is_valid_command) {
@@ -94,6 +101,7 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
             if (forwarding_table[i][j] != NULL) {
                 shortest_tableChange(shortest_table, index, forwarding_table[i][j]);
                 updated = true;
+                printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
                 break;
             }
         }
@@ -146,17 +154,15 @@ void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_t
     } else {
         // Parse the shortest path to find the last destination
         char* path = shortest_table[i];
-        char* token = strtok(path, "-");
-        char* lastDestination = NULL;
+        
+        char dest[2];
+        dest[0] = path[3];
+        dest[1] = path[4];
 
-        // Traverse through the tokens to find the last one
-        while (token != NULL) {
-            lastDestination = token;
-            token = strtok(NULL, "-");
-        }
+        printf("Last destination: %s\n", dest);
 
         // Update the expedition_table with the last destination
-        expedition_tableChange(expedition_table, index, lastDestination);
+        expedition_tableChange(expedition_table, index, dest);
     }
 }
 
@@ -174,12 +180,16 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
         printf("Memory allocation error\n");
         exit(1);
     }
+
+    printf("Changed forwarding table\n");
 }
 
 // Change entry in shortest Path Table given index and new text
 // If input is null, entry is cleared
 void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* input) {
     int i = atoi(index);
+
+    printf("PRINTING INPUT: %s\n", input);
 
     if (shortest_table[i] != NULL) {
         free(shortest_table[i]);
@@ -194,6 +204,7 @@ void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* i
     } else {
         shortest_table[i] = NULL;
     }
+    printf("Changed shortest path table\n");
 }
 
 // Change entry in expedition_table_table Table given index and new text
@@ -213,9 +224,10 @@ void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, cha
     } else {
         expedition_table[i] = NULL;
     }
+    printf("Changed expedition table\n");
 }
 
-void freeRoutingTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE]) {
+void freeTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE]) {
     for (int i = 0; i < TABLE_SIZE; ++i) {
         for (int j = 0; j < TABLE_SIZE; ++j) {
             if (forwarding_table[i][j] != NULL) {

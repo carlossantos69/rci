@@ -13,6 +13,7 @@
 #include "join.h"
 #include "help.h"
 #include "tcp.h"
+#include "route.h"
 
 #define MAX(A,B) ((A)>=(B)?(A):(B))
 
@@ -60,6 +61,14 @@ int main(int argc, char *argv[]) {
     char ring[4];
 
     print_help(); //Imprimit lista de comandos
+
+    for (int i=0; i<TABLE_SIZE; ++i) {
+        for(int j=0; j<TABLE_SIZE; ++j) {
+            forwarding_table[i][j] = NULL;
+        }
+            shortest_table[i] = NULL;
+            expedition_table[i] = NULL;
+    }
 
 
     if (argc != 3 && argc != 5) {
@@ -180,15 +189,21 @@ int main(int argc, char *argv[]) {
 
         if (FD_ISSET(STDIN_FILENO, &read_fds)) { //Input ready
             fgets(input, sizeof(input), stdin);
-
-            command = strtok(input, " \t\n");
-            arg_count = 0;
             char *token;
+            char *temp_input = strdup(input);
+            token = strtok(input, " \t\n");
+            command = strdup(token);
+            
+            arg_count = 0;
+
             while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                arguments[arg_count] = token;
+                arguments[arg_count] = strdup(token);
                 arg_count++;
             }
             arguments[arg_count] = NULL;
+
+            strcpy(input, temp_input);
+            free(temp_input);
 
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
                 if (arg_count == 0 && inRing) {
@@ -221,8 +236,7 @@ int main(int argc, char *argv[]) {
                     printf("Nó não registado ou erro de syntax\n");
                 }
             }
-
-            if (strcmp(command,"exit") == 0 || strcmp(command, "x") == 0) {
+            else if (strcmp(command,"exit") == 0 || strcmp(command, "x") == 0) {
                 if (predFD != -1) {
                     close(predFD);
                 }
@@ -234,9 +248,7 @@ int main(int argc, char *argv[]) {
                 }
                 break;
             }
-
-
-            if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0 ) { //join (j) ring id
+            else if (strcmp(command,"join") == 0 || strcmp(command, "j") == 0 ) { //join (j) ring id
                 if (arg_count == 2 && strlen(arguments[0]) == 3 && strlen(arguments[1]) == 2 ) {
                     if (inRing) {
                         printf("Nó já está no anel\n");
@@ -259,8 +271,7 @@ int main(int argc, char *argv[]) {
                     printf("Sintax error\n");
                 }
             }
-
-            if (strcmp(command, "dj") == 0) {
+            else if (strcmp(command, "dj") == 0) {
                 if (arg_count == 4 && strlen(arguments[0]) == 2 && strlen(arguments[1]) == 2 && strlen(arguments[3]) == 5) {
                     if (inRing) {
                         printf("Nó já está no anel\n");
@@ -279,10 +290,9 @@ int main(int argc, char *argv[]) {
                 } else {
                     printf("Sintax error\n"); 
                 }
-            }
-            
+            }            
 
-            if (strcmp(command,"direct") == 0) {
+            else if (strcmp(command,"direct") == 0) {
                 if (arg_count == 5) {
                     if (strcmp(arguments[0],"join") == 0 && strlen(arguments[1]) == 2 && strlen(arguments[2]) == 2 && strlen(arguments[4]) == 5) {
                         if (inRing) {
@@ -304,7 +314,7 @@ int main(int argc, char *argv[]) {
             }
 
 
-            if (strcmp(command, "show") == 0 && strcmp(arguments[0], "topology")== 0 ) {                  
+            else if (strcmp(command, "show") == 0 && strcmp(arguments[0], "topology")== 0 ) {                  
                 printf("Showing Topology: \n");
                 if(inRing){
                     printf("O nó %s tem ip: %s  e porta: %s\n", ID ,IP, TCP);
@@ -321,7 +331,7 @@ int main(int argc, char *argv[]) {
                     
             }
 
-            if(strcmp(command, "st")== 0){       
+            else if(strcmp(command, "st")== 0){       
                 printf("Showing Topology: \n");   
                 if(inRing){
                     printf("O nó %s tem ip: %s  e porta: %s\n", ID ,IP, TCP);
@@ -337,7 +347,30 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+            else if (strcmp(command,"ROUTE") == 0) { //DEBUG
+                //printf("COMANDO %s", buffer);
+                if (RouteHandler(forwarding_table, shortest_table, expedition_table, input, "30")) {
+                    if (predFD != -1) {
+                        //Send ROUTE to predecessor
+                        //route(fd_pred, id, n, shortestPath[n]);
+                    }
+                    if (succFD != -1) {
+                        //Send ROUTE to sucessor
+                        //ROUTE id n shortestPath[n]
+                        //route(fd_pred, id, n, shortestPath[n]);
+                    }
+                    //TODO: send to chords
+                }
+            }
+            else{
+                printf("Syntax error or command not found\n");
+                print_help();
+            }
 
+            for (int i=0; i<arg_count; i++){
+                free(arguments[i]);
+            }
+            free(command);
         }
         if (FD_ISSET(fd_TCP,&read_fds)) {
 
@@ -447,7 +480,10 @@ int main(int argc, char *argv[]) {
                 printf("Error reading TCP message sucessor\n");
                 exit(1);
             } else if(n == 0) { // Sucessor saiu
-                close(succFD);
+                if (close(succFD) == -1) {
+                    printf("Error closing connection to sucessor\n");
+                    exit(1);
+                }
                 succFD = -1;
 
                 strcpy(succID, second_succID);
@@ -547,7 +583,10 @@ int main(int argc, char *argv[]) {
             } else if (n == 0) {
                 //Meter a flag
                 SendSuccOnPred = true;
-                close(predFD);
+                if(close(predFD) == -1){
+                    printf("Error closing predecessor connection\n");
+                    exit(1);
+                }
                 predFD = -1;
             } else {
 
@@ -565,12 +604,29 @@ int main(int argc, char *argv[]) {
                 arguments[arg_count] = NULL;
 
                 //Processar comando no futuro
+                if (strcmp(command,"ROUTE") == 0) { //Received route command
+                    //TODO: finish code
+                    if (RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)) {
+                        n = atoi(arguments[1]);
+                        if (predFD != -1) {
+                            //Send ROUTE to predecessor
+                            route_command(predFD, ID, arguments[1], shortest_table[n]);
+                        }
+                        if (succFD != -1) {
+                            //Send ROUTE to sucessor
+                            route_command(predFD, ID, arguments[1], shortest_table[n]);
+                        }
+                        //TODO: send to chords
+                    }
 
             }
             
         }
 
     }    
+
+
+}
 
 
     freeaddrinfo(TEJO_res);

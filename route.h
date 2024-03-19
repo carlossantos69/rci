@@ -8,7 +8,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
 
 void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, char* input);
 
-void freeRoutingTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE]);
+void freeTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE]);
 
 void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* input);
 
