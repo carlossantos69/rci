@@ -367,10 +367,7 @@ int main(int argc, char *argv[]) {
                 printf("Syntax error or command not found\n");
                 print_help();
             }
-
-            for (int i=0; i<arg_count; i++){
-                free(arguments[i]);
-            }
+            
             free(command);
         }
         if (FD_ISSET(fd_TCP,&read_fds)) {
@@ -628,8 +625,6 @@ int main(int argc, char *argv[]) {
 
 
 }
-
-
     freeaddrinfo(TEJO_res);
     freeTables(forwarding_table, shortest_table, expedition_table);
     free(IP);
