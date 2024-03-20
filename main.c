@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
     char* forwarding_table[TABLE_SIZE][TABLE_SIZE];
     char* shortest_table[TABLE_SIZE];
     char* expedition_table[TABLE_SIZE];
+    char* lineBreak;
 
     char ID[3];
     char *IP, *TCP, *regIP, *regUDP;
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]) {
 
     n = bind(fd_TCP, res->ai_addr, res->ai_addrlen);
     if(n==-1) {
-        printf("Erro a dar bind UDP\n");
+        printf("Erro a dar bind TCP\n");
         exit(1);
     }
     freeaddrinfo(res);
@@ -188,6 +189,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (FD_ISSET(STDIN_FILENO, &read_fds)) { //Input ready
+            memset(buffer, 0, sizeof(buffer));
             fgets(input, sizeof(input), stdin);
             char *token;
             char *temp_input = strdup(input);
@@ -267,6 +269,10 @@ int main(int argc, char *argv[]) {
                         succFD = join_command(arguments, buffer, ring, fd_UDP, TEJO_res, ID, IP, TCP, succID, succIP, succTCP, second_succID, second_succIP, second_succTCP, predID, &registado);
 
                         inRing = true;
+
+                        int i= atoi(ID);
+
+                        shortest_table[i] = ID;
                     }
                 } else {
                     printf("Sintax error\n");
@@ -286,6 +292,11 @@ int main(int argc, char *argv[]) {
 
                         succFD = direct_join(ID, IP, TCP, succIP, succTCP, &hints);
                         inRing = true;
+
+                        int i= atoi(ID);
+                        shortest_table[i] = ID;
+
+                        printf("ID ADJ»ADN: %s", ID);
                     }
 
                 } else {
@@ -306,6 +317,10 @@ int main(int argc, char *argv[]) {
 
                             succFD = direct_join(ID, IP, TCP, succIP, succTCP, &hints);
                             inRing = true;
+
+                            int i= atoi(ID);
+                            shortest_table[i] = ID;
+
                         }
                     }
                     
@@ -374,15 +389,17 @@ int main(int argc, char *argv[]) {
 
             else if (strcmp(command,"ROUTE") == 0) { //DEBUG
                 //printf("COMANDO %s", buffer);
+                n = atoi(arguments[1]);
                 if (RouteHandler(forwarding_table, shortest_table, expedition_table, input, "30")) {
                     if (predFD != -1) {
                         //Send ROUTE to predecessor
-                        //route(fd_pred, id, n, shortestPath[n]);
+                        route_command(predFD, ID, arguments[1], shortest_table[n]);
+                        printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
                     }
                     if (succFD != -1) {
                         //Send ROUTE to sucessor
-                        //ROUTE id n shortestPath[n]
-                        //route(fd_pred, id, n, shortestPath[n]);
+                        route_command(succFD, ID, arguments[1], shortest_table[n]);
+                        printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
                     }
                     //TODO: send to chords
                 }
@@ -410,145 +427,151 @@ int main(int argc, char *argv[]) {
             
             free(command);
         }
-        if (FD_ISSET(fd_TCP,&read_fds)) {
-
+        if (FD_ISSET(fd_TCP, &read_fds)) {
+            memset(buffer, 0, sizeof(buffer));
             addrlen = sizeof(addr);
             if ((fd = accept(fd_TCP, (struct sockaddr*) &addr, &addrlen)) == -1) {
                 printf("Error accepting TCP connection\n");
                 exit(1);
             }
 
-              for(int i=0; i<sizeof(buffer); i++){
-                    buffer[i] = '\0';
-            }
-
             n = read(fd, buffer, BUFFER_SIZE);
-            
+            buffer[n] = '\0';            
             if (n== -1) {
                 printf("Error reading TCP message\n");
                 exit(1);
             }
 
-            printf("Received via TCP fd\n");
-            write(1, buffer, n);
+            printf("Print do buffer: %s\n", buffer);
 
-            char *token;
-            char *temp_buffer = strdup(buffer);
-            token = strtok(buffer, " \t\n");
-            command = strdup(token);
-            
-            arg_count = 0;
 
-            while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                arguments[arg_count] = strdup(token);
-                arg_count++;
-            }
-            arguments[arg_count] = NULL;
+            char *lineBreak = strchr(buffer, '\n');
+            while (lineBreak != NULL) {
+                *lineBreak = '\0';
 
-            strcpy(buffer, temp_buffer);
-            free(temp_buffer);
+                printf("Processing command via new connection: %s\n", buffer);
 
-            buffer[n] = '\0';
-
-            if (strcmp(command, "ENTRY") == 0) {
+                char *token;
+                char *temp_buffer = strdup(buffer);
+                token = strtok(buffer, " \t\n");
+                command = strdup(token);
                 
-                strcpy(predID, arguments[0]);
+                arg_count = 0;
 
-                if (strcmp(ID, succID) == 0) {
-                    strcpy(second_succID, ID);
-                    strcpy(second_succIP, IP);
-                    strcpy(second_succTCP, TCP);
-                    strcpy(succID, arguments[0]);
-                    strcpy(succIP, arguments[1]);
-                    strcpy(succTCP, arguments[2]);
+                while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
+                    arguments[arg_count] = strdup(token);
+                    arg_count++;
+                }
+                arguments[arg_count] = NULL;
 
-                    succFD = socket(AF_INET, SOCK_STREAM, 0);
-                    if(succFD == -1){
-                        printf("Erro a criar a socket TCP\n");
-                        exit(1);
-                    }
+                strcpy(buffer, temp_buffer);
+                free(temp_buffer);
 
-                    errcode = getaddrinfo(arguments[1], arguments[2], &hints, &res);
-                    if(errcode != 0) {
-                        printf("Error a procurar IP do novo nó\n");
-                        exit(1);
-                    }
-
-                    n = connect(succFD, res->ai_addr,  res->ai_addrlen);
-                    if(n==-1) {
-                        printf("Erro a estabelecer ligação com o novo nó");
-                        exit(1);
-                    }
-                    freeaddrinfo(res);
-
-                    succ_command(fd, arguments[0], arguments[1], arguments[2]);
-                    pred_command(succFD, ID);
-
-                } else if (strcmp(ID, second_succID) == 0) {
-                    strcpy(second_succID, arguments[0]);
-                    strcpy(second_succIP, arguments[1]);
-                    strcpy(second_succTCP, arguments[2]);
-
-                    entry_command(predFD, arguments[0], arguments[1], arguments[2]);
-                    succ_command(fd, succID, succIP, succTCP);
-
+                if (strcmp(command, "ENTRY") == 0) {
                     
-                } else {
-                    entry_command(predFD, arguments[0], arguments[1], arguments[2]);
-                    succ_command(fd, succID, succIP, succTCP);
-                }
+                    strcpy(predID, arguments[0]);
 
+                    if (strcmp(ID, succID) == 0) {
+                        strcpy(second_succID, ID);
+                        strcpy(second_succIP, IP);
+                        strcpy(second_succTCP, TCP);
+                        strcpy(succID, arguments[0]);
+                        strcpy(succIP, arguments[1]);
+                        strcpy(succTCP, arguments[2]);
 
-                if(predFD != -1){
-                    close(predFD);
-                    predFD = -1;
-                }
-                predFD = fd;
-            }            
+                        succFD = socket(AF_INET, SOCK_STREAM, 0);
+                        if(succFD == -1){
+                            printf("Erro a criar a socket TCP\n");
+                            exit(1);
+                        }
 
-            if (strcmp(command, "PRED") == 0) {
-                if (predFD != -1) {
-                    close(predFD);
-                }
-                predFD = fd;
-                strcpy(predID, arguments[0]);
+                        errcode = getaddrinfo(arguments[1], arguments[2], &hints, &res);
+                        if(errcode != 0) {
+                            printf("Error a procurar IP do novo nó\n");
+                            exit(1);
+                        }
 
-                if(SendSuccOnPred){
-                    succ_command(predFD, succID, succIP, succTCP);
-                }
-                SendSuccOnPred = false;                
-            }
-            
-            if (strcmp(command, "ROUTE") == 0){
-                if(RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)){
-                    n = atoi(arguments[1]);
-                    if(succFD != -1){
-                        route_command(succFD, ID, arguments[1], shortest_table[n] );
-                        printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
+                        n = connect(succFD, res->ai_addr,  res->ai_addrlen);
+                        if(n==-1) {
+                            printf("Erro a estabelecer ligação com o novo nó");
+                            exit(1);
+                        }
+                        freeaddrinfo(res);
+
+                        succ_command(fd, arguments[0], arguments[1], arguments[2]);
+                        pred_command(succFD, ID);
+                        route_propagation(succFD, ID, shortest_table);
+
+                    } else if (strcmp(ID, second_succID) == 0) {
+                        strcpy(second_succID, arguments[0]);
+                        strcpy(second_succIP, arguments[1]);
+                        strcpy(second_succTCP, arguments[2]);
+
+                        entry_command(predFD, arguments[0], arguments[1], arguments[2]);
+                        succ_command(fd, succID, succIP, succTCP);
+
+                        
+                    } else {
+                        entry_command(predFD, arguments[0], arguments[1], arguments[2]);
+                        succ_command(fd, succID, succIP, succTCP);
                     }
+
 
                     if(predFD != -1){
-                        route_command(predFD, ID, arguments[1], shortest_table[n] );
-                        printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
+                        close(predFD);
+                        predFD = -1;
                     }
+                    predFD = fd;
+                }            
+
+                if (strcmp(command, "PRED") == 0) {
+                    if (predFD != -1) {
+                        close(predFD);
+                    }
+                    predFD = fd;
+                    strcpy(predID, arguments[0]);
+
+                    if(SendSuccOnPred){
+                        succ_command(predFD, succID, succIP, succTCP);
+                    }
+                    SendSuccOnPred = false;   
+
+                    //route_propagation(predFD, ID, shortest_table);             
+                }
+                
+                if (strcmp(command, "ROUTE") == 0){
+                    //printf("BUFFER DO ROUTE: %s", buffer);
+                    if(RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)){
+                        n = atoi(arguments[1]);
+                        if(succFD != -1){
+                            route_command(succFD, ID, arguments[1], shortest_table[n] );
+                            printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
+                        }
+
+                        if(predFD != -1){
+                            route_command(predFD, ID, arguments[1], shortest_table[n] );
+                            printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
+                        }
+                    }
+
                 }
 
+                //memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
+                //lineBreak = strchr(lineBreak + 1, '\n');
+
+
+                memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
+                lineBreak = strchr(buffer, '\n');
             }
 
-            for(int i=0; i<arg_count; i++){
-                buffer[i] = '\0';
-            }
+        
 
         }
 
 
         if (FD_ISSET(succFD, &read_fds)) {
             printf("Recebido do sucessor\n");
-
-            for(int i=0; i<sizeof(buffer); i++){
-                    buffer[i] = '\0';
-            }
-
+            memset(buffer, 0, sizeof(buffer));
             n = read(succFD, buffer, BUFFER_SIZE);
             if (n == -1) {
                 printf("Error reading TCP message sucessor\n");
@@ -586,74 +609,81 @@ int main(int argc, char *argv[]) {
 
                 pred_command(succFD, ID);
                 succ_command(predFD, succID, succIP, succTCP);
+                //route_propagation(succFD, ID, shortest_table);
             } else {
+                //printf("DEBUG: %s\n", buffer);
+                buffer[n] = '\0';
+                lineBreak = strchr(buffer, '\n');
+                while (lineBreak != NULL) {
+                    *lineBreak = '\0';
 
-                buffer[n] = '\0'; //Experimentar
+                    printf("Processing command via sucessor: %s\n", buffer);
 
-                write(1, buffer, n);
-
-                command = strtok(buffer, " \t\n");
-                arg_count = 0;
-                char *token;
-                while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                    arguments[arg_count] = token;
-                    arg_count++;
-                }
-                arguments[arg_count] = NULL;
+                    command = strtok(buffer, " \t\n");
+                    arg_count = 0;
+                    char *token;
+                    while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
+                        arguments[arg_count] = token;
+                        arg_count++;
+                    }
+                    arguments[arg_count] = NULL;
 
 
-                if(strcmp(command, "SUCC") == 0){
-                    strcpy(second_succID, arguments[0]);
-                    strcpy(second_succIP, arguments[1]);
-                    strcpy(second_succTCP, arguments[2]);
-                }
-
-                if(strcmp(command, "ENTRY") == 0) { //Entry vindo do sucessor
-                    
-                    if (succFD != -1) {
-                        close(succFD);
+                    if(strcmp(command, "SUCC") == 0){
+                        strcpy(second_succID, arguments[0]);
+                        strcpy(second_succIP, arguments[1]);
+                        strcpy(second_succTCP, arguments[2]);
                     }
 
+                    if(strcmp(command, "ENTRY") == 0) { //Entry vindo do sucessor
+                        
+                        if (succFD != -1) {
+                            close(succFD);
+                        }
 
-                    succFD = socket(AF_INET, SOCK_STREAM, 0);
-                    if(succFD == -1){
-                        printf("Erro a criar a socket TCP\n");
-                        exit(1);
+
+                        succFD = socket(AF_INET, SOCK_STREAM, 0);
+                        if(succFD == -1){
+                            printf("Erro a criar a socket TCP\n");
+                            exit(1);
+                        }
+                        
+                        //Fechar conecção e conectar a arguments[1] arguments[2]
+                        n=getaddrinfo(arguments[1], arguments[2], &hints, &res);
+                        if(n!=0)/*error*/exit(1);
+
+                        n=connect(succFD, res->ai_addr, res->ai_addrlen);
+                        if(n==-1)/*error*/exit(1);
+                        freeaddrinfo(res);
+
+
+                        strcpy(second_succID, succID);
+                        strcpy(second_succIP, succIP);
+                        strcpy(second_succTCP, succTCP);
+                        strcpy(succID, arguments[0]);
+                        strcpy(succIP, arguments[1]);
+                        strcpy(succTCP, arguments[2]);
+
+                        pred_command(succFD, ID); //Informar o nó que entrou
+                        if (predFD != -1) {
+                            succ_command(predFD, arguments[0], arguments[1], arguments[2]);
+                        }
+
+                        //route_propagation(succFD, ID, shortest_table);
+                        
                     }
-                    
-                    //Fechar conecção e conectar a arguments[1] arguments[2]
-                    n=getaddrinfo(arguments[1], arguments[2], &hints, &res);
-                    if(n!=0)/*error*/exit(1);
-
-                    n=connect(succFD, res->ai_addr, res->ai_addrlen);
-                    if(n==-1)/*error*/exit(1);
-                    freeaddrinfo(res);
-
-
-                    strcpy(second_succID, succID);
-                    strcpy(second_succIP, succIP);
-                    strcpy(second_succTCP, succTCP);
-                    strcpy(succID, arguments[0]);
-                    strcpy(succIP, arguments[1]);
-                    strcpy(succTCP, arguments[2]);
-
-                    pred_command(succFD, ID); //Informar o nó que entrou
-                    if (predFD != -1) {
-                        succ_command(predFD, arguments[0], arguments[1], arguments[2]);
-                    }
-                    
+                    // Find next line break
+                    memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
+                    lineBreak = strchr(buffer, '\n');
                 }
-            }
+                
 
+        }
         }
 
         if (FD_ISSET(predFD, &read_fds)) {
             printf("Recebido do predecessor\n");
-
-            for(int i=0; i<sizeof(buffer); i++){
-                    buffer[i] = '\0';
-            }
-
+            memset(buffer, 0, sizeof(buffer));
             n = read(predFD, buffer, BUFFER_SIZE);
             if (n == -1) {
                 printf("Error reading TCP message\n");
@@ -667,52 +697,62 @@ int main(int argc, char *argv[]) {
                 }
                 predFD = -1;
             } else {
-
-                char *token;
-                char *temp_buffer = strdup(buffer);
-                token = strtok(buffer, " \t\n");
-                command = strdup(token);
                 
-                arg_count = 0;
+                buffer[n] = '\0';
+                lineBreak = strchr(buffer, '\n');
+                
+                while (lineBreak != NULL) {
+                    *lineBreak = '\0';
 
-                while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                    arguments[arg_count] = strdup(token);
-                    arg_count++;
-                }
-                arguments[arg_count] = NULL;
+                    printf("Processing command via predecessor: %s\n", buffer);
 
-                for(int i=0; i<arg_count; i++){
-                    printf("Printing argument %d: %s\n", i, arguments[i]);
-                }
-
-                strcpy(buffer, temp_buffer);
-                free(temp_buffer);
+                    char *token;
+                    char *temp_buffer = strdup(buffer);
+                    token = strtok(buffer, " \t\n");
+                    command = strdup(token);
                     
+                    arg_count = 0;
 
+                    while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
+                        arguments[arg_count] = strdup(token);
+                        arg_count++;
+                    }
+                    arguments[arg_count] = NULL;
 
-                printf("COMANDO %s\n", command);
-
-                //Processar comando no futuro
-                if (strcmp(command,"ROUTE") == 0) { //Received route command
-                    //TODO: finish code
-                    printf("BUFFER: %s\n", buffer);
-                    if (RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)) {
-                        n = atoi(arguments[1]);
-                        if (predFD != -1) {
-                            //Send ROUTE to predecessor
-                            route_command(predFD, ID, arguments[1], shortest_table[n]);
-                            printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
-                        }
-                        if (succFD != -1) {
-                            //Send ROUTE to sucessor
-                            route_command(succFD, ID, arguments[1], shortest_table[n]);
-                            printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
-                        }
-                        //TODO: send to chords
+                    for(int i=0; i<arg_count; i++){
+                        printf("Printing argument %d: %s\n", i, arguments[i]);
                     }
 
-                    free(command);
-            }
+                    strcpy(buffer, temp_buffer);
+                    free(temp_buffer);                        
+
+
+
+                    //Processar comando no futuro
+                    if (strcmp(command,"ROUTE") == 0) { //Received route command
+                        //TODO: finish code
+                        //printf("BUFFER: %s", buffer);
+                        if (RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)) {
+                            n = atoi(arguments[1]);
+                            if (predFD != -1) {
+                                //Send ROUTE to predecessor
+                                route_command(predFD, ID, arguments[1], shortest_table[n]);
+                                printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
+                            }
+                            if (succFD != -1) {
+                                //Send ROUTE to sucessor
+                                route_command(succFD, ID, arguments[1], shortest_table[n]);
+                                printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
+                            }
+                            //TODO: send to chords
+                        }
+
+                        free(command);
+                    }
+                    memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
+                    // Find next line break
+                    lineBreak = strchr(buffer + 1, '\n');
+                }
             
         }
 

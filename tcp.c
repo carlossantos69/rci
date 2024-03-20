@@ -79,10 +79,11 @@ int route_command(int fd, char* i, char* n, char* path) {
     if (message == NULL) {
         return 1;
     }
+
     strcpy(message, "ROUTE ");
     strcat(message, i);
     strcat(message, " ");
-    strcat(message, i);
+    strcat(message, n);
     strcat(message, " ");
     strcat(message, path);
     strcat(message, "\n");
@@ -93,6 +94,7 @@ int route_command(int fd, char* i, char* n, char* path) {
 
     return 0;
 }
+
 
 void print_forwardingTable(char* forwardingTable[TABLE_SIZE][TABLE_SIZE], char* destination){
 
@@ -105,7 +107,7 @@ void print_forwardingTable(char* forwardingTable[TABLE_SIZE][TABLE_SIZE], char* 
         char* next_hop = forwardingTable[dest_index][i];
         if (next_hop != NULL) {
             is_empty = false;
-            printf("  %03d : %s\n", i, next_hop); // Use %03d to print leading zeros
+            printf(" %03d : %s\n", i, next_hop); // Use %03d to print leading zeros
         }
     }
 
@@ -135,15 +137,13 @@ void print_expeditionTable(char* expedition_table[TABLE_SIZE]) {
         if (expedition_table[i] != NULL) {
             // Convert integer index to string
             if (i < 10) {
-                sprintf(index_str, "00%d", i); // Pad with two leading zeros
-            } else if (i < 100) {
-                sprintf(index_str, "0%d", i); // Pad with one leading zero
+                sprintf(index_str, "0%d", i); // Pad with two leading zeros
             } else {
                 sprintf(index_str, "%d", i); // No leading zeros needed
             }
 
             // Print source and next hop
-            printf("          %s | %s\n", index_str, expedition_table[i]);
+            printf("                %s | %s\n", index_str, expedition_table[i]);
             printed = true;
         }
     }

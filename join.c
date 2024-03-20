@@ -52,7 +52,7 @@ int join_command(char** arguments, char* buffer, char* ring, int fd_UDP, struct 
             if (id >= 0 && id < 100) { // Check bounds before accessing used array
                 used[id] = true;
                 nodes_number++;
-                printf("There are %d nodes\n", nodes_number);
+                printf("There are %d node(s)\n", nodes_number);
             } else {
                 printf("ID inválido: %s\n", ID);
                 // Decide what to do if ID is invalid, such as exiting the loop or handling the error

@@ -17,3 +17,5 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
 void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* index);
 
 int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char*shortest_table[TABLE_SIZE], char* index);
+
+void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]);

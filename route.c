@@ -11,6 +11,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "tcp.h"
+
 #define TABLE_SIZE 100
 
 int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* command, char* destination){
@@ -28,7 +30,6 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     final_dest = strdup(token);
     token = strtok(NULL, " ");
     path = strdup(token);
-    path[strlen(path)-1] = '\0';
 
     printf("Origin: %s | Final Destination: %s | Destination: %s\n", origin, final_dest, destination);
     printf("Path: %s\n", path);
@@ -40,7 +41,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     }
     if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) -1]) {
         is_valid_command = false;
-        printf("Invalid ROUTE command. Final destination mismatch. Ignoring.\n");
+        printf("Invalid ROUTE command. Final destination mismatch with. Ignoring.\n");
     }
     
     char original_path[sizeof(path)]; // Create a copy of the original path
@@ -102,7 +103,7 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
             if (forwarding_table[i][j] != NULL) {
                 shortest_tableChange(shortest_table, index, forwarding_table[i][j]);
                 updated = true;
-                //printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
+                printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
                 break;
             }
         }
@@ -190,7 +191,7 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
 void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* input) {
     int i = atoi(index);
 
-    //printf("PRINTING INPUT: %s\n", input);
+    printf("PRINTING INPUT: %s\n", input);
 
     if (shortest_table[i] != NULL) {
         free(shortest_table[i]);
@@ -207,6 +208,8 @@ void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* i
     }
     printf("Changed shortest path table\n");
 }
+
+
 
 // Change entry in expedition_table_table Table given index and new text
 void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, char* input) {
@@ -226,6 +229,31 @@ void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, cha
         expedition_table[i] = NULL;
     }
     printf("Changed expedition table\n");
+}
+
+void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
+    char destination[3]; // Allocate space for 3 digits and null terminator
+
+    printf("Broadcasting routes\n");
+
+    for (int i = 0; i < TABLE_SIZE; ++i) {
+        if (shortest_path[i] != NULL) {
+            // Convert integer index to string
+            if (i < 10) {
+                sprintf(destination, "0%d", i); // Pad with one leading zero
+            } else {
+                sprintf(destination, "%d", i); // No leading zeros needed
+            }
+
+            //printf("Destination: %s\n", destination);
+            // Route to destination
+            route_command(fd, source, destination, shortest_path[i]);
+            // TODO: Send to chords
+
+            // Print the route being broadcasted
+            printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
+        }
+    }
 }
 
 void freeTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE]) {
