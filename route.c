@@ -90,7 +90,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     return has_changes;
 }
 
-
+//TODO - Atualizar esta função
 int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* index) {
     int i = atoi(index);
     bool updated = false;
@@ -150,8 +150,11 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
 
 void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* index) {
     int i = atoi(index);
-
-    if (strlen(shortest_table[i]) == 2) {
+    
+    if(shortest_table[i] == NULL){
+        expedition_tableChange(expedition_table, index, NULL);
+    }
+    else if (strlen(shortest_table[i]) == 2) {
         expedition_tableChange(expedition_table, index, NULL);
     } else {
         // Parse the shortest path to find the last destination
@@ -160,7 +163,7 @@ void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_t
         char dest[3];
         dest[0] = path[3];
         dest[1] = path[4];
-        dest[2] = '\0';
+        dest[3] = '\0';
 
         //printf("Last destination: %s\n", dest);
 
@@ -176,13 +179,18 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
 
     if (forwarding_table[i][j] != NULL) {
         free(forwarding_table[i][j]);
+        forwarding_table[i][j] = NULL;
+    }
+    
+    if(input != NULL){
+        forwarding_table[i][j] = (char*) malloc(strlen(input) + 1);
+        if (forwarding_table[i][j] == NULL) {
+            printf("Memory allocation error\n");
+            exit(1);
+        }
+        strcpy(forwarding_table[i][j], input);
     }
 
-    forwarding_table[i][j] = strdup(input);
-    if (forwarding_table[i][j] == NULL) {
-        printf("Memory allocation error\n");
-        exit(1);
-    }
 
     printf("Changed forwarding table\n");
 }
@@ -280,6 +288,50 @@ void freeTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_t
         }
     }
 }
+
+int isConnected(char* destination_id, char* successor_id, char* predecessor_id) {
+    // Check if the destination ID matches either the successor ID or the predecessor ID
+    if (successor_id && strcmp(destination_id, successor_id) == 0) {
+        return 1; // Connected to successor
+    }
+    if (predecessor_id && strcmp(destination_id, predecessor_id) == 0) {
+        return 1; // Connected to predecessor
+    }
+    return 0; // Not connected to successor or predecessor
+}
+
+void removeColumn(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* myid, char* close_id, int succ_fd, int pred_fd) {
+    int close_id_int = atoi(close_id);
+    char line[3];
+    // Remove the whole column of entries related to close_id (= NULL) from forwarding_table
+    for (int i = 0; i < TABLE_SIZE; ++i) {
+        if(forwarding_table[i][close_id_int] != NULL){
+            forwarding_table[i][close_id_int] = NULL;
+            sprintf(line,"%d", i);
+            forwarding_tableChange(forwarding_table, line, close_id, NULL);
+            // Refresh shortest_table and expedition_table
+            if (refreshShortestTable(forwarding_table, shortest_table, close_id) == 1) {
+                refreshExpeditionTable(shortest_table, expedition_table, close_id);
+                if (pred_fd != -1) {
+                    route_command(pred_fd, myid, line, shortest_table[i]);
+                }
+                if (succ_fd != -1) {
+                    route_command(succ_fd, myid, line, shortest_table[i]);
+                }
+            }
+        }
+    }
+
+}
+
+
+
+
+
+
+
+
+
 
 
 
