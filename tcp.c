@@ -75,7 +75,7 @@ int pred_command(int fd, char* id){
 
 int route_command(int fd, char* i, char* n, char* path) {
     //Form message
-    char *message = (char*) malloc(strlen("ROUTE") + strlen(i) + strlen(n) + strlen(path) + 6);
+    char *message = (char*) malloc(strlen("ROUTE") + strlen(i) + strlen(n) + strlen(path) + 5);
     if (message == NULL) {
         return 1;
     }

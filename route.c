@@ -20,7 +20,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     bool is_valid_command = true;
     bool has_changes = false;
 
-    printf("COMANDO: %s", command);
+    //printf("COMANDO: %s", command);
 
     // Extracting the command details
     char* token = strtok(command, " ");
@@ -31,8 +31,8 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     token = strtok(NULL, " ");
     path = strdup(token);
 
-    printf("Origin: %s | Final Destination: %s | Destination: %s\n", origin, final_dest, destination);
-    printf("Path: %s\n", path);
+    // printf("Origin: %s | Final Destination: %s | Destination: %s\n", origin, final_dest, destination);
+    // printf("Path: %s\n", path);
 
     // Checking command validity
     if (strncmp(origin, path, 2) != 0) {
@@ -44,7 +44,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
         printf("Invalid ROUTE command. Final destination mismatch with. Ignoring.\n");
     }
     
-    char original_path[sizeof(path)]; // Create a copy of the original path
+    char original_path[strlen(path) + 1]; // Create a copy of the original path
     strcpy(original_path, path);
 
     // Checking if the given destination is not already in the path
@@ -103,7 +103,7 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
             if (forwarding_table[i][j] != NULL) {
                 shortest_tableChange(shortest_table, index, forwarding_table[i][j]);
                 updated = true;
-                printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
+                //printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
                 break;
             }
         }
@@ -157,9 +157,10 @@ void refreshExpeditionTable(char* shortest_table[TABLE_SIZE], char* expedition_t
         // Parse the shortest path to find the last destination
         char* path = shortest_table[i];
         
-        char dest[2];
+        char dest[3];
         dest[0] = path[3];
         dest[1] = path[4];
+        dest[2] = '\0';
 
         //printf("Last destination: %s\n", dest);
 
@@ -220,19 +221,26 @@ void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, cha
     }
 
     if (input != NULL) {
-        expedition_table[i] = strdup(input);
-        if (expedition_table[i] == NULL) {
+        // Allocate memory for expedition_table[i]
+        expedition_table[i] = (char*)malloc(strlen(input) + 1); // +1 for null terminator
+
+        if (expedition_table[i] != NULL) {
+            // Copy input to expedition_table[i]
+            strcpy(expedition_table[i], input);
+        } else {
+            // Handle memory allocation failure
             printf("Memory allocation error\n");
             exit(1);
         }
     } else {
+        // Set expedition_table[i] to NULL if input is NULL
         expedition_table[i] = NULL;
     }
     printf("Changed expedition table\n");
 }
 
 void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
-    char destination[3]; // Allocate space for 3 digits and null terminator
+    char destination[4]; // Allocate space for 3 digits and null terminator
 
     printf("Broadcasting routes\n");
 
@@ -254,6 +262,7 @@ void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
             printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
         }
     }
+
 }
 
 void freeTables(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE]) {

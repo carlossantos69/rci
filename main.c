@@ -27,7 +27,7 @@
 #define MAX_ARGUMENT_COUNT 10
 #define MAX_NODE_COUNT 100
 
-#define BUFFER_SIZE 2000
+#define BUFFER_SIZE 50000
 
 
 
@@ -555,6 +555,7 @@ int main(int argc, char *argv[]) {
 
                 }
 
+                free(command);
                 //memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
                 //lineBreak = strchr(lineBreak + 1, '\n');
 
