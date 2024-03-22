@@ -42,10 +42,11 @@ int join_command(char** arguments, char* buffer, char* ring, int fd_UDP, struct 
     }
     arguments[arg_count] = NULL;
 
+    bool used[100] = {false};
+
     //Ver lista de nós e escolher o sucessor e o ID
     if (strcmp(command, "NODESLIST") == 0) {
         nodes_number = 0; //Nodes which are in the list
-        bool used[100] = { false }; //ID's which are in use on the ring
 
         for (int i=0; i<arg_count-1; i=i+3) {
             int id = atoi(arguments[i]);

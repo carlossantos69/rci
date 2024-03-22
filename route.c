@@ -20,69 +20,86 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     bool is_valid_command = true;
     bool has_changes = false;
 
-    //printf("COMANDO: %s", command);
+    printf("COMANDO: %s", command);
+    int n = countElements(command);
 
+    if(n==2){
+        char* token = strtok(command, " ");
+        token = strtok(NULL, " ");
+        origin = strdup(token);
+        token = strtok(NULL, " ");
+        final_dest = strdup(token);
+
+        forwarding_tableChange(forwarding_table, final_dest, origin, NULL);
+        if(refreshShortestTable(forwarding_table, shortest_table, final_dest)){
+            has_changes = true;
+            refreshExpeditionTable(shortest_table, expedition_table, final_dest);
+        }
+        return has_changes;
+    }else if(n ==3){
+        char* token = strtok(command, " ");
+        token = strtok(NULL, " ");
+        origin = strdup(token);
+        token = strtok(NULL, " ");
+        final_dest = strdup(token);
+        token = strtok(NULL, " ");
+        path = strdup(token);
+
+        if (strncmp(origin, path, 2) != 0) {
+            is_valid_command = false;
+            printf("Invalid ROUTE command. Origin mismatch. Ignoring.\n");
+        }
+        if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) -1]) {
+            is_valid_command = false;
+            printf("Invalid ROUTE command. Final destination mismatch with. Ignoring.\n");
+        }
+        
+        char original_path[strlen(path) + 1]; // Create a copy of the original path
+        strcpy(original_path, path);
+
+        // Checking if the given destination is not already in the path
+        token = strtok(path, "-");
+        while (token != NULL) {
+            //printf("Comparing %s : %s\n", token, destination);
+            if (strcmp(token, destination) == 0) {
+                is_valid_command = false;
+                break;
+            }
+            token = strtok(NULL, "-");
+        }
+
+        strcpy(path, original_path);
+
+        // Processing valid command
+        if (is_valid_command) {
+            printf("Valid route.\n");
+
+            // Constructing new path
+            new_path = (char*)malloc(strlen(destination) + strlen("-") + strlen(path) + 2);
+            if (new_path == NULL) {
+                printf("Memory allocation error for path");
+                exit(1);
+            }
+            strcpy(new_path, destination);
+            strcat(new_path, "-");
+            strcat(new_path, path);
+
+            forwarding_tableChange(forwarding_table, final_dest, origin, new_path);
+            if (refreshShortestTable(forwarding_table, shortest_table, final_dest)) {
+                has_changes = true;
+                refreshExpeditionTable(shortest_table, expedition_table, final_dest);
+            }
+            free(new_path);
+        } else {
+            printf("Invalid route.\n");
+        }
+    }
     // Extracting the command details
-    char* token = strtok(command, " ");
-    token = strtok(NULL, " ");
-    origin = strdup(token);
-    token = strtok(NULL, " ");
-    final_dest = strdup(token);
-    token = strtok(NULL, " ");
-    path = strdup(token);
 
     // printf("Origin: %s | Final Destination: %s | Destination: %s\n", origin, final_dest, destination);
     // printf("Path: %s\n", path);
 
     // Checking command validity
-    if (strncmp(origin, path, 2) != 0) {
-        is_valid_command = false;
-        printf("Invalid ROUTE command. Origin mismatch. Ignoring.\n");
-    }
-    if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) -1]) {
-        is_valid_command = false;
-        printf("Invalid ROUTE command. Final destination mismatch with. Ignoring.\n");
-    }
-    
-    char original_path[strlen(path) + 1]; // Create a copy of the original path
-    strcpy(original_path, path);
-
-    // Checking if the given destination is not already in the path
-    token = strtok(path, "-");
-    while (token != NULL) {
-        //printf("Comparing %s : %s\n", token, destination);
-        if (strcmp(token, destination) == 0) {
-            is_valid_command = false;
-            break;
-        }
-        token = strtok(NULL, "-");
-    }
-
-    strcpy(path, original_path);
-
-    // Processing valid command
-    if (is_valid_command) {
-        printf("Valid route.\n");
-
-        // Constructing new path
-        new_path = (char*)malloc(strlen(destination) + strlen("-") + strlen(path) + 2);
-        if (new_path == NULL) {
-            printf("Memory allocation error for path");
-            exit(1);
-        }
-        strcpy(new_path, destination);
-        strcat(new_path, "-");
-        strcat(new_path, path);
-
-        forwarding_tableChange(forwarding_table, final_dest, origin, new_path);
-        if (refreshShortestTable(forwarding_table, shortest_table, final_dest)) {
-            has_changes = true;
-            refreshExpeditionTable(shortest_table, expedition_table, final_dest);
-        }
-        free(new_path);
-    } else {
-        printf("Invalid route.\n");
-    }
 
     free(origin);
     free(final_dest);
@@ -92,59 +109,42 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
 
 //TODO - Atualizar esta função
 int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* index) {
-    int i = atoi(index);
+    int index_int = atoi(index);
     bool updated = false;
-    bool forwarding_tableNULL = true;
-    char* bestPath = NULL;
-    size_t minSize = 0;
-
-    if (shortest_table[i] == NULL) { // Special case: shortest path table is empty -> Find first non-null entry in forward table
-        for (int j = 0; j < TABLE_SIZE; ++j) {
-            if (forwarding_table[i][j] != NULL) {
-                shortest_tableChange(shortest_table, index, forwarding_table[i][j]);
-                updated = true;
-                //printf("PRINT TABELA: %s\n", forwarding_table[i][j]);
-                break;
-            }
-        }
-        if (updated) {
-            return 1;
-        }
-    }
-
-    bestPath = strdup(shortest_table[i]);
-    if (bestPath == NULL) {
-        // Handle memory allocation failure
-        return -1;
-    }
-    minSize = strlen(bestPath);
-
-    for (int j = 0; j < TABLE_SIZE; ++j) {
-        if (forwarding_table[i][j] != NULL) {
-            forwarding_tableNULL = false;
-            size_t pathLength = strlen(forwarding_table[i][j]);
-            if (pathLength < minSize) {
-                minSize = pathLength;
-                strcpy(bestPath, forwarding_table[i][j]);
-                updated = true;
+    int minSize = 0;
+    int best_pos;
+    
+    for (int i = 0; i < TABLE_SIZE; i++)
+    {
+        if(forwarding_table[index_int][i] != NULL){
+            if((strlen(forwarding_table[index_int][i]) <= minSize) || minSize == 0){
+                minSize = strlen(forwarding_table[index_int][i]);
+                best_pos = i; 
             }
         }
     }
 
-    if (forwarding_tableNULL) { // Special Case: forward table line is all NULL, clear shortest_table
-        shortest_tableChange(shortest_table, index, NULL);
-        free(bestPath);
-        return 1;
-    }
 
-    if (updated) {
-        shortest_tableChange(shortest_table, index, bestPath);
-        free(bestPath);
-        return 1;
+    if (minSize == 0) { //Line is all empty, send message with NULL example: ROUTE 30 15<LF>
+        if (shortest_table[index_int] != NULL) {
+            shortest_tableChange(shortest_table, index, NULL);
+            updated = true;
+            printf("UPDATED THIS FUCKING TABLE\n");
+        }
     } else {
-        free(bestPath);
-        return 0;
+        if (shortest_table[index_int] == NULL) {
+            shortest_tableChange(shortest_table, index, forwarding_table[index_int][best_pos]);
+            updated = true;
+        } else {
+            if (strcmp(shortest_table[best_pos], forwarding_table[index_int][best_pos]) != 0) { //Only change if its new best path
+                shortest_tableChange(shortest_table, index, forwarding_table[index_int][best_pos]);
+                updated = true;
+            }
+        }
     }
+
+    return updated; 
+    
 }
 
 
@@ -200,7 +200,7 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
 void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* input) {
     int i = atoi(index);
 
-    printf("PRINTING INPUT: %s\n", input);
+    //printf("PRINTING INPUT: %s\n", input);
 
     if (shortest_table[i] != NULL) {
         free(shortest_table[i]);
@@ -267,7 +267,7 @@ void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
             // TODO: Send to chords
 
             // Print the route being broadcasted
-            printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
+            //printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
         }
     }
 
@@ -306,17 +306,28 @@ void removeColumn(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest
     // Remove the whole column of entries related to close_id (= NULL) from forwarding_table
     for (int i = 0; i < TABLE_SIZE; ++i) {
         if(forwarding_table[i][close_id_int] != NULL){
-            forwarding_table[i][close_id_int] = NULL;
-            sprintf(line,"%d", i);
+            sprintf(line, "%d", i);
+            if (strlen(line) == 1) {
+                char temp[3];
+                temp[0] = '0';
+                temp[1] = line[0];
+                temp[2] = '\0';
+
+                strcpy(line, temp);
+            }
+
+            //printf("DEBUG LINE: %s\n", line);
             forwarding_tableChange(forwarding_table, line, close_id, NULL);
             // Refresh shortest_table and expedition_table
             if (refreshShortestTable(forwarding_table, shortest_table, close_id) == 1) {
                 refreshExpeditionTable(shortest_table, expedition_table, close_id);
-                if (pred_fd != -1) {
-                    route_command(pred_fd, myid, line, shortest_table[i]);
-                }
-                if (succ_fd != -1) {
-                    route_command(succ_fd, myid, line, shortest_table[i]);
+                if(shortest_table[i] != NULL){
+                    if (pred_fd != -1) {
+                        route_command(pred_fd, myid, line, shortest_table[i]);
+                    }
+                    if (succ_fd != -1) {
+                        route_command(succ_fd, myid, line, shortest_table[i]);
+                    }
                 }
             }
         }

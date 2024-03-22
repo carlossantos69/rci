@@ -18,3 +18,5 @@ void print_forwardingTable(char* forwardingTable[TABLE_SIZE][TABLE_SIZE], char* 
 void print_shortestTable(char* shortestTable[TABLE_SIZE], char*destination);
 
 void print_expeditionTable(char* expedition_table[TABLE_SIZE]);
+
+int countElements(const char* buffer);

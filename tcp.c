@@ -75,22 +75,37 @@ int pred_command(int fd, char* id){
 
 int route_command(int fd, char* i, char* n, char* path) {
     //Form message
-    char *message = (char*) malloc(strlen("ROUTE") + strlen(i) + strlen(n) + strlen(path) + 5);
-    if (message == NULL) {
-        return 1;
+    if(path != NULL){
+        char *message = (char*) malloc(strlen("ROUTE") + strlen(i) + strlen(n) + strlen(path) + 5);
+        if (message == NULL) {
+            return 1;
+        }
+        strcpy(message, "ROUTE ");
+        strcat(message, i);
+        strcat(message, " ");
+        strcat(message, n);
+        strcat(message, " ");
+        strcat(message, path);
+        strcat(message, "\n");
+
+            //Send message via TCP
+        write(fd, message, strlen(message));
+        free(message);
+    }else if (path == NULL){
+        char *message = (char*) malloc(strlen("ROUTE") + strlen(i) + strlen(n) + 4);
+        if (message == NULL) {
+            return 1;
+        }
+        strcpy(message, "ROUTE ");
+        strcat(message, i);
+        strcat(message, " ");
+        strcat(message, n);
+        strcat(message, "\n");
+
+            //Send message via TCP
+        write(fd, message, strlen(message));
+        free(message);
     }
-
-    strcpy(message, "ROUTE ");
-    strcat(message, i);
-    strcat(message, " ");
-    strcat(message, n);
-    strcat(message, " ");
-    strcat(message, path);
-    strcat(message, "\n");
-
-    //Send message via TCP
-    write(fd, message, strlen(message));
-    free(message);
 
     return 0;
 }
@@ -153,3 +168,23 @@ void print_expeditionTable(char* expedition_table[TABLE_SIZE]) {
     printf("\n");
 }
 
+
+int countElements(const char* buffer) {
+    int count = 0;
+    int is_route_skipped = 0;
+
+    // Skip the "ROUTE" part
+    for (int i = 0; buffer[i] != '\0'; i++) {
+        if (buffer[i] == ' ' && !is_route_skipped) {
+            is_route_skipped = 1;
+            continue;
+        }
+        if (is_route_skipped && buffer[i] == ' ')
+            count++;
+    }
+
+    // Increment count by 1 for the last element
+    count++;
+
+    return count;
+}
