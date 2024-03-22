@@ -14,6 +14,7 @@
 #include "tcp.h"
 
 #define TABLE_SIZE 100
+#define MAX_NODE_COUNT 100
 
 int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* command, char* destination){
     char* origin, *final_dest, *path, *new_path;
@@ -354,6 +355,57 @@ int find_socket_fd(char* destination_ID, int predecessor_fd, char* predecessor_I
         return successor_fd;
     }
     return -1; // ID not found 
+}
+
+void parse_input(char *input, char **command, char *arguments[], int *arg_count) {
+    char *token;
+    char *temp_input = strdup(input);
+
+    token = strtok(input, " \t\n");
+    *command = strdup(token);
+
+    *arg_count = 0;
+
+    if (strcmp(*command, "message") == 0 || strcmp(*command, "m") == 0) {
+        // For "message" command, store the first token as arguments[0]
+        token = strtok(NULL, " \t\n");
+        if (token != NULL) {
+            arguments[0] = strdup(token);
+            // Concatenate everything else as arguments[1]
+            token = strtok(NULL, "\n");
+            if (token != NULL) {
+                arguments[1] = strdup(token);
+                *arg_count = 2;
+            }
+        }
+    } else if(strcmp(*command, "CHAT") == 0){
+        // For "CHAT" command, store the first two tokens as arguments[0] and arguments[1]
+        token = strtok(NULL, " \t\n");
+        if (token != NULL) {
+            arguments[0] = strdup(token);
+            token = strtok(NULL, " \t\n");
+            if (token != NULL) {
+                arguments[1] = strdup(token);
+                // Concatenate everything else as arguments[2]
+                token = strtok(NULL, "\n");
+                if (token != NULL) {
+                    arguments[2] = strdup(token);
+                    *arg_count = 3;
+                }
+            }
+        }
+    }   
+    else {
+        // For other commands, tokenize normally
+        while ((token = strtok(NULL, " \t\n")) != NULL && *arg_count < MAX_NODE_COUNT * 3) {
+            arguments[*arg_count] = strdup(token);
+            (*arg_count)++;
+        }
+        arguments[*arg_count] = NULL;
+    }
+
+    strcpy(input, temp_input);
+    free(temp_input);
 }
 
 

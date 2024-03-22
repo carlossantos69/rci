@@ -194,21 +194,8 @@ int main(int argc, char *argv[]) {
         if (FD_ISSET(STDIN_FILENO, &read_fds)) { //Input ready
             memset(buffer, 0, sizeof(buffer));
             fgets(input, sizeof(input), stdin);
-            char *token;
-            char *temp_input = strdup(input);
-            token = strtok(input, " \t\n");
-            command = strdup(token);
-            
-            arg_count = 0;
 
-            while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                arguments[arg_count] = strdup(token);
-                arg_count++;
-            }
-            arguments[arg_count] = NULL;
-
-            strcpy(input, temp_input);
-            free(temp_input);
+            parse_input(input, &command, arguments, &arg_count);
 
             if (strcmp(command,"leave") == 0 || strcmp(command, "l") == 0) { //leave (l)
                 if (arg_count == 0 && inRing) {
@@ -404,7 +391,6 @@ int main(int argc, char *argv[]) {
             } else if (strcmp(command, "sf") == 0) { // Show Forwarding
                 print_expeditionTable(expedition_table);
             } else if(strcmp(command, "message") == 0 || strcmp(command, "m") == 0){
-                if(arg_count == 2){
                     if(inRing){
                         if(strcmp(arguments[0], ID) !=0){
                             if(strcmp(searchNextID(expedition_table, arguments[0]), "ERROR")){
@@ -426,7 +412,6 @@ int main(int argc, char *argv[]) {
                             printf("Cannot send message to your own node\n");
                         }
                     }
-                }
             }
 
             else{
@@ -460,21 +445,7 @@ int main(int argc, char *argv[]) {
 
                 //printf("Processing command via new connection: %s\n", buffer);
 
-                char *token;
-                char *temp_buffer = strdup(buffer);
-                token = strtok(buffer, " \t\n");
-                command = strdup(token);
-                
-                arg_count = 0;
-
-                while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                    arguments[arg_count] = strdup(token);
-                    arg_count++;
-                }
-                arguments[arg_count] = NULL;
-
-                strcpy(buffer, temp_buffer);
-                free(temp_buffer);
+                parse_input(buffer, &command, arguments, &arg_count);
 
                 if (strcmp(command, "ENTRY") == 0) {
 
@@ -590,7 +561,6 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                free(command);
                 memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
                 lineBreak = strchr(buffer, '\n');
             }
@@ -665,7 +635,7 @@ int main(int argc, char *argv[]) {
                 }
 
             } else {
-                printf("DEBUG: %s\n", buffer);
+                //printf("DEBUG: %s\n", buffer);
                 buffer[n] = '\0';
                 lineBreak = strchr(buffer, '\n');
                 while (lineBreak != NULL) {
@@ -673,21 +643,9 @@ int main(int argc, char *argv[]) {
 
                     //printf("Processing command via sucessor: %s\n", buffer);
 
-                    char *token;
-                    char *temp_buffer = strdup(buffer);
-                    token = strtok(buffer, " \t\n");
-                    command = strdup(token);
-                    
-                    arg_count = 0;
+                    parse_input(buffer, &command, arguments, &arg_count);
 
-                    while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                        arguments[arg_count] = strdup(token);
-                        arg_count++;
-                    }
-                    arguments[arg_count] = NULL;
-
-                    strcpy(buffer, temp_buffer);
-                    free(temp_buffer); 
+                    //printf("COMANDO %s\n", command);
 
                     if(strcmp(command, "CHAT") == 0){
                         if(strcmp(ID, arguments[1]) == 0){
@@ -780,8 +738,6 @@ int main(int argc, char *argv[]) {
 
                     }
 
-                    free(command);
-
                     // Find next line break
                     memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
                     lineBreak = strchr(buffer, '\n');
@@ -832,25 +788,7 @@ int main(int argc, char *argv[]) {
 
                     //printf("Processing command via predecessor: %s\n", buffer);
 
-                    char *token;
-                    char *temp_buffer = strdup(buffer);
-                    token = strtok(buffer, " \t\n");
-                    command = strdup(token);
-                    
-                    arg_count = 0;
-
-                    while ((token = strtok(NULL, " \t\n")) != NULL && arg_count < MAX_NODE_COUNT*3) {
-                        arguments[arg_count] = strdup(token);
-                        arg_count++;
-                    }
-                    arguments[arg_count] = NULL;
-
-                    // for(int i=0; i<arg_count; i++){
-                    //     printf("Printing argument %d: %s\n", i, arguments[i]);
-                    // }
-
-                    strcpy(buffer, temp_buffer);
-                    free(temp_buffer);                        
+                    parse_input(buffer, &command, arguments, &arg_count);                        
 
 
 
@@ -899,7 +837,6 @@ int main(int argc, char *argv[]) {
                             }                            
                         }
                     }
-                    free(command);
                     memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);
                     // Find next line break
                     lineBreak = strchr(buffer + 1, '\n');

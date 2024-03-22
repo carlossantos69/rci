@@ -28,3 +28,5 @@ int isConnected(char* destination_id, char* successor_id, char* predecessor_id);
 char* searchNextID(char* expeditionTable[TABLE_SIZE], char* dest);
 
 int find_socket_fd(char* destination_ID, int predecessor_fd, char* predecessor_ID, int successor_fd, char* successor_ID);
+
+void parse_input(char *input, char **command, char *arguments[], int *arg_count);
