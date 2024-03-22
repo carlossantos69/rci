@@ -88,7 +88,7 @@ int route_command(int fd, char* i, char* n, char* path) {
         strcat(message, path);
         strcat(message, "\n");
 
-        printf("SENDING THIS MESSAGE: %s\n", message);
+        //printf("SENDING THIS MESSAGE: %s\n", message);
 
             //Send message via TCP
         write(fd, message, strlen(message));
@@ -104,7 +104,7 @@ int route_command(int fd, char* i, char* n, char* path) {
         strcat(message, n);
         strcat(message, "\n");
         
-        printf("SENDING THIS MESSAGE: %s\n", message);
+        //printf("SENDING THIS MESSAGE: %s\n", message);
             //Send message via TCP
         write(fd, message, strlen(message));
         free(message);
@@ -190,4 +190,30 @@ int countElements(const char* buffer) {
     count++;
 
     return count;
+}
+
+int send_chat_message(int socket_fd, char* sender, char* receiver, char* message) {
+    if (socket_fd < 0) {
+        return 0;
+    }
+
+    // Constructing the message
+    char *chat_msg = (char*) malloc(strlen("MESSAGE") + strlen("00") + strlen("00") + strlen(message) + 5);
+    if (message == NULL) {
+        return 1;
+    }
+
+    // Building the message
+    strcpy(chat_msg, "CHAT");
+    strcat(chat_msg, " ");
+    strcat(chat_msg, sender);
+    strcat(chat_msg, " ");
+    strcat(chat_msg, receiver);
+    strcat(chat_msg, " ");
+    strcat(chat_msg, message);
+    strcat(chat_msg, "\n");
+
+    // Sending the message
+    return (write(socket_fd, chat_msg, strlen(chat_msg)));
+    free(chat_msg);
 }

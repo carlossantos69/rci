@@ -46,8 +46,9 @@ int main(int argc, char *argv[]) {
     char *IP, *TCP, *regIP, *regUDP;
     char succID[3], succIP[16], succTCP[6]; //Info of Sucessor    
     char second_succID[3], second_succIP[16], second_succTCP[6]; //Info of Sucessor
+    char nextID[3]; // next ID to send message
     char predID[3];
-    int succFD = -1, predFD = -1; //Descritores
+    int succFD = -1, predFD = -1, nextFD = -1;//Descritores
 
     char input[MAX_COMMAND_SIZE];
     char buffer[BUFFER_SIZE]; //Temporary read buffers
@@ -402,6 +403,30 @@ int main(int argc, char *argv[]) {
                 }
             } else if (strcmp(command, "sf") == 0) { // Show Forwarding
                 print_expeditionTable(expedition_table);
+            } else if(strcmp(command, "message") == 0 || strcmp(command, "m") == 0){
+                if(arg_count == 2){
+                    if(inRing){
+                        if(strcmp(arguments[0], ID) !=0){
+                            if(strcmp(searchNextID(expedition_table, arguments[0]), "ERROR")){
+                            strcpy(nextID,searchNextID(expedition_table, arguments[0]));
+                                if(nextID != NULL){
+                                    nextFD = find_socket_fd(nextID, predFD, predID, succFD, succID);
+                                    if(nextFD != -1){
+                                        if(send_chat_message(nextFD, ID, arguments[0], arguments[1]) > 1){
+                                            printf("Sent message to %s\n", arguments[0]);
+                                        }else{
+                                            printf("Error sending message\n");
+                                        }
+                                    }
+                                }
+                            }else{
+                                printf("Could not find node to send message\n");
+                            }
+                        }else{
+                            printf("Cannot send message to your own node\n");
+                        }
+                    }
+                }
             }
 
             else{
@@ -631,6 +656,7 @@ int main(int argc, char *argv[]) {
                     pred_command(succFD, ID);
                     route_propagation(succFD, ID, shortest_table);
                 }else if(strcmp(succID, ID) == 0){
+
                     forwarding_tableChange(forwarding_table, predID, predID, NULL);
                     if (refreshShortestTable(forwarding_table, shortest_table, predID)) {
                         refreshExpeditionTable(shortest_table, expedition_table, predID);
@@ -639,7 +665,7 @@ int main(int argc, char *argv[]) {
                 }
 
             } else {
-                //printf("DEBUG: %s\n", buffer);
+                printf("DEBUG: %s\n", buffer);
                 buffer[n] = '\0';
                 lineBreak = strchr(buffer, '\n');
                 while (lineBreak != NULL) {
@@ -663,7 +689,24 @@ int main(int argc, char *argv[]) {
                     strcpy(buffer, temp_buffer);
                     free(temp_buffer); 
 
-
+                    if(strcmp(command, "CHAT") == 0){
+                        if(strcmp(ID, arguments[1]) == 0){
+                            printf("Received a message from %s: %s\n", arguments[0], arguments[2]);
+                        }
+                        else{
+                            strcpy(nextID ,searchNextID(expedition_table, arguments[1]));
+                            if(nextID != NULL){
+                                nextFD = find_socket_fd(nextID, predFD, predID, succFD, succID);
+                                if(nextFD != -1){
+                                    if(send_chat_message(nextFD, arguments[0], arguments[1], arguments[2]) > 1){
+                                        //printf("Sent message to %s\n", arguments[0]);
+                                    }else{
+                                        printf("Error sending message\n");
+                                    }
+                                }
+                            }                            
+                        }
+                    }
                     if(strcmp(command, "SUCC") == 0){
                         strcpy(second_succID, arguments[0]);
                         strcpy(second_succIP, arguments[1]);
@@ -836,6 +879,25 @@ int main(int argc, char *argv[]) {
                         }
                         
 
+                    }
+
+                    if(strcmp(command, "CHAT") == 0){
+                        if(strcmp(ID, arguments[1]) == 0){
+                            printf("Received a message from %s: %s\n", arguments[0], arguments[2]);
+                        }
+                        else{
+                            strcpy(nextID ,searchNextID(expedition_table, arguments[1]));
+                            if(nextID != NULL){
+                                nextFD = find_socket_fd(nextID, predFD, predID, succFD, succID);
+                                if(nextFD != -1){
+                                    if(send_chat_message(nextFD, arguments[0], arguments[1], arguments[2]) > 1){
+                                        //printf("Sent message to %s\n", arguments[0]);
+                                    }else{
+                                        printf("Error sending message\n");
+                                    }
+                                }
+                            }                            
+                        }
                     }
                     free(command);
                     memmove(buffer, lineBreak + 1, strlen(lineBreak + 1) + 1);

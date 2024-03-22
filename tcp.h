@@ -20,3 +20,5 @@ void print_shortestTable(char* shortestTable[TABLE_SIZE], char*destination);
 void print_expeditionTable(char* expedition_table[TABLE_SIZE]);
 
 int countElements(const char* buffer);
+
+int send_chat_message(int socket_fd, char* sender, char* receiver, char* message);

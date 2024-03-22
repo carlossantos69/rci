@@ -24,3 +24,7 @@ void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]);
 void removeColumn(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_table[TABLE_SIZE], char* expedition_table[TABLE_SIZE], char* myid, char* close_id, int succ_fd, int pred_fd);
 
 int isConnected(char* destination_id, char* successor_id, char* predecessor_id);
+
+char* searchNextID(char* expeditionTable[TABLE_SIZE], char* dest);
+
+int find_socket_fd(char* destination_ID, int predecessor_fd, char* predecessor_ID, int successor_fd, char* successor_ID);

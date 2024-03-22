@@ -336,7 +336,25 @@ void removeColumn(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest
 }
 
 
+char* searchNextID(char* expeditionTable[TABLE_SIZE], char* dest){
+    int id = atoi(dest);
+    
+    if(expeditionTable[id] != NULL){
+        return(expeditionTable[id]);
+    }else{
+        return("ERROR");
+    }
+}
 
+int find_socket_fd(char* destination_ID, int predecessor_fd, char* predecessor_ID, int successor_fd, char* successor_ID) {
+    if (strcmp(destination_ID, predecessor_ID) == 0) {
+        return predecessor_fd;
+    }
+    if (strcmp(destination_ID, successor_ID) == 0) {
+        return successor_fd;
+    }
+    return -1; // ID not found 
+}
 
 
 
