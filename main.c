@@ -392,7 +392,7 @@ int main(int argc, char *argv[]) {
                     if(inRing){
                         if(strcmp(arguments[0], ID) !=0){
                             if(strlen(arguments[1]) < 128){
-                                printf("STRING LENGHT IS %ld", strlen(arguments[1]));
+                                //printf("STRING LENGHT IS %ld", strlen(arguments[1]));
                                 if(strcmp(searchNextID(expedition_table, arguments[0]), "ERROR")){
                                 strcpy(nextID,searchNextID(expedition_table, arguments[0]));
                                     if(nextID != NULL){
@@ -452,19 +452,9 @@ int main(int argc, char *argv[]) {
 
                 if (strcmp(command, "ENTRY") == 0) {
 
-                    // for(int i=0; i<TABLE_SIZE; i++){
-                    //     char column[3];
-                    //     sprintf(column,"%d", i);             
-                    //     forwarding_tableChange(forwarding_table, arguments[0], column, NULL);
-                    // }
-
-                    shortest_tableChange(shortest_table, arguments[0], NULL);
-                    expedition_tableChange(expedition_table, arguments[0], NULL);
-
-
                     if(strcmp(succID, ID) != 0){
                         if(!isConnected(predID,succID, NULL)){
-                        removeColumn(forwarding_table, shortest_table, expedition_table, ID, predID, succFD, -1);
+                        removeColumn(forwarding_table, shortest_table, expedition_table, ID, predID, succFD, predFD);
                         }
                     }           
 
@@ -583,13 +573,11 @@ int main(int argc, char *argv[]) {
             } else if(n == 0) { // Sucessor saiu
                 printf("Sucessor left\n");
 
-
+                removeColumn(forwarding_table, shortest_table, expedition_table, ID, arguments[0], -1, -1);
                 if(predFD != -1){
                     route_command(predFD, ID, succID, NULL);
                 }
-                if(!isConnected(succID, NULL, predID)){
-                    removeColumn(forwarding_table, shortest_table, expedition_table, ID, succID, -1, predFD);
-                }
+                removeColumn(forwarding_table, shortest_table, expedition_table, ID, succID, -1, predFD);
 
                 strcpy(succID, second_succID);
                 strcpy(succIP, second_succIP);
@@ -676,13 +664,16 @@ int main(int argc, char *argv[]) {
 
                     if(strcmp(command, "ENTRY") == 0) { //Entry vindo do sucessor
 
-                        if(!isConnected(succID, NULL, predID)){
-                            removeColumn(forwarding_table, shortest_table, expedition_table, ID, succID, -1, predFD);
+                        if(predFD != -1  && strcmp(succID, ID) != 0 && strcmp(second_succID, ID) != 0){
+                            route_command(predFD, ID, succID, NULL);
                         }
-
                         
-                        if (succFD != -1) {                          
+                        if (succFD != -1) {   
+                            if(!isConnected(succID, NULL, predID)){
+                                removeColumn(forwarding_table, shortest_table, expedition_table, ID, succID, -1, predFD);
+                            }                   
                             close(succFD);
+                            succFD = -1;
                         }
 
 
@@ -759,20 +750,22 @@ int main(int argc, char *argv[]) {
                 exit(1);
             } else if (n == 0) {
                 printf("Predecessor left\n");
+
+
+
                 //Meter a flag
                 if(succFD != -1){
                     route_command(succFD, ID, predID, NULL);
                 }
-                if(!isConnected(predID, succID, NULL)){
-                    removeColumn(forwarding_table, shortest_table, expedition_table, ID, predID, succFD, -1);
+
+                for (int i=0; i<TABLE_SIZE; ++i) {
+                    if (forwarding_table[atoi(predID)][i] != NULL) {
+                        free(forwarding_table[atoi(predID)][i]);
+                        forwarding_table[atoi(predID)][i] = NULL;
+                    }
                 }
 
-
-                // for(int i=0; i<TABLE_SIZE; i++){
-                //     char column[3];
-                //     sprintf(column,"%d", i);             
-                //     forwarding_tableChange(forwarding_table, column, predID, NULL);
-                // }
+                removeColumn(forwarding_table, shortest_table, expedition_table, ID, predID, succFD, -1);
 
                 SendSuccOnPred = true;
                 if(close(predFD) == -1){
@@ -802,21 +795,21 @@ int main(int argc, char *argv[]) {
                         if(strcmp(succID, ID) !=0){
                             if(isConnected(arguments[0], succID, predID)){ 
                             //printf("BUFFER DO ROUTE: %s\n", buffer);
-                            if (RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)) {
-                                n = atoi(arguments[1]);
-                                if (predFD != -1) {
-                                    //Send ROUTE to predecessor
-                                    route_command(predFD, ID, arguments[1], shortest_table[n]);
-                                    //printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
+                                if (RouteHandler(forwarding_table, shortest_table, expedition_table, buffer, ID)) {
+                                    n = atoi(arguments[1]);
+                                    if (predFD != -1) {
+                                        //Send ROUTE to predecessor
+                                        route_command(predFD, ID, arguments[1], shortest_table[n]);
+                                        //printf("Sent Route %s, %s, %s to predecessor\n", ID, arguments[1], shortest_table[n]);
+                                    }
+                                    if (succFD != -1) {
+                                        //Send ROUTE to sucessor
+                                        route_command(succFD, ID, arguments[1], shortest_table[n]);
+                                        //printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
+                                    }
+                                    //TODO: send to chords
                                 }
-                                if (succFD != -1) {
-                                    //Send ROUTE to sucessor
-                                    route_command(succFD, ID, arguments[1], shortest_table[n]);
-                                    //printf("Sent Route %s, %s, %s to sucessor\n", ID, arguments[1], shortest_table[n]);
-                                }
-                                //TODO: send to chords
                             }
-                        }
                         }
                         
 
