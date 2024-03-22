@@ -391,6 +391,7 @@ int main(int argc, char *argv[]) {
             } else if (strcmp(command, "sf") == 0) { // Show Forwarding
                 print_expeditionTable(expedition_table);
             } else if(strcmp(command, "message") == 0 || strcmp(command, "m") == 0){
+                if(strlen(arguments[1])<128){
                     if(inRing){
                         if(strcmp(arguments[0], ID) !=0){
                             if(strcmp(searchNextID(expedition_table, arguments[0]), "ERROR")){
@@ -412,6 +413,9 @@ int main(int argc, char *argv[]) {
                             printf("Cannot send message to your own node\n");
                         }
                     }
+                }else{
+                    printf("Message is too large, maxmimu size of 128 characaters\n");
+                }
             }
 
             else{
