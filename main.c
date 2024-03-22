@@ -23,7 +23,7 @@
 #define TEJO_IP "193.136.138.142"
 #define TEJO_UDP "59000"
 
-#define MAX_COMMAND_SIZE 100
+#define MAX_COMMAND_SIZE 150
 #define MAX_ARGUMENT_COUNT 10
 #define MAX_NODE_COUNT 100
 
@@ -172,8 +172,6 @@ int main(int argc, char *argv[]) {
         FD_SET(fd_TCP, &read_fds); 
 
         maxfd = MAX(STDIN_FILENO, fd_TCP);
-
-        //TODO CORDASSSSS E MENSAGENS
 
         //Só meter se tiver inicializado
         if (succFD != -1) {
@@ -391,31 +389,32 @@ int main(int argc, char *argv[]) {
             } else if (strcmp(command, "sf") == 0) { // Show Forwarding
                 print_expeditionTable(expedition_table);
             } else if(strcmp(command, "message") == 0 || strcmp(command, "m") == 0){
-                if(strlen(arguments[1])<128){
                     if(inRing){
                         if(strcmp(arguments[0], ID) !=0){
-                            if(strcmp(searchNextID(expedition_table, arguments[0]), "ERROR")){
-                            strcpy(nextID,searchNextID(expedition_table, arguments[0]));
-                                if(nextID != NULL){
-                                    nextFD = find_socket_fd(nextID, predFD, predID, succFD, succID);
-                                    if(nextFD != -1){
-                                        if(send_chat_message(nextFD, ID, arguments[0], arguments[1]) > 1){
-                                            printf("Sent message to %s\n", arguments[0]);
-                                        }else{
-                                            printf("Error sending message\n");
+                            if(strlen(arguments[1]) < 128){
+                                printf("STRING LENGHT IS %ld", strlen(arguments[1]));
+                                if(strcmp(searchNextID(expedition_table, arguments[0]), "ERROR")){
+                                strcpy(nextID,searchNextID(expedition_table, arguments[0]));
+                                    if(nextID != NULL){
+                                        nextFD = find_socket_fd(nextID, predFD, predID, succFD, succID);
+                                        if(nextFD != -1){
+                                            if(send_chat_message(nextFD, ID, arguments[0], arguments[1]) > 1){
+                                                printf("Sent message to %s\n", arguments[0]);
+                                            }else{
+                                                printf("Error sending message\n");
+                                            }
                                         }
                                     }
+                                }else{
+                                    printf("Could not find node to send message\n");
                                 }
                             }else{
-                                printf("Could not find node to send message\n");
+                                printf("Message exceeds maximum size. Limit is 128 characters\n");
                             }
                         }else{
                             printf("Cannot send message to your own node\n");
                         }
                     }
-                }else{
-                    printf("Message is too large, maxmimu size of 128 characaters\n");
-                }
             }
 
             else{

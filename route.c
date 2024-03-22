@@ -251,7 +251,7 @@ void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, cha
 void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
     char destination[4]; // Allocate space for 3 digits and null terminator
 
-    printf("Broadcasting routes\n");
+    //printf("Broadcasting routes\n");
 
     for (int i = 0; i < TABLE_SIZE; ++i) {
         if (shortest_path[i] != NULL) {
@@ -268,7 +268,7 @@ void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
             // TODO: Send to chords
 
             // Print the route being broadcasted
-            printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
+            //printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
         }
     }
 
