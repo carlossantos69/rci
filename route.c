@@ -117,7 +117,7 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
     for (int i = 0; i < TABLE_SIZE; i++)
     {
         if(forwarding_table[index_int][i] != NULL){
-            if((strlen(forwarding_table[index_int][i]) <= minSize) || minSize == 0){
+            if((strlen(forwarding_table[index_int][i]) < minSize) || minSize == 0){
                 minSize = strlen(forwarding_table[index_int][i]);
                 best_pos = i; 
             }
@@ -267,7 +267,7 @@ void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
             // TODO: Send to chords
 
             // Print the route being broadcasted
-            //printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
+            printf("SENDING ROUTE %s %s %s\n", source, destination, shortest_path[i]);
         }
     }
 

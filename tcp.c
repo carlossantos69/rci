@@ -88,6 +88,8 @@ int route_command(int fd, char* i, char* n, char* path) {
         strcat(message, path);
         strcat(message, "\n");
 
+        printf("SENDING THIS MESSAGE: %s\n", message);
+
             //Send message via TCP
         write(fd, message, strlen(message));
         free(message);
@@ -101,7 +103,8 @@ int route_command(int fd, char* i, char* n, char* path) {
         strcat(message, " ");
         strcat(message, n);
         strcat(message, "\n");
-
+        
+        printf("SENDING THIS MESSAGE: %s\n", message);
             //Send message via TCP
         write(fd, message, strlen(message));
         free(message);
