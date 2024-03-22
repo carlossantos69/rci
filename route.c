@@ -20,7 +20,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
     bool is_valid_command = true;
     bool has_changes = false;
 
-    printf("COMANDO: %s", command);
+    //printf("COMANDO: %s", command);
     int n = countElements(command);
 
     if(n==2){
@@ -47,11 +47,11 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
 
         if (strncmp(origin, path, 2) != 0) {
             is_valid_command = false;
-            printf("Invalid ROUTE command. Origin mismatch. Ignoring.\n");
+            //printf("Invalid ROUTE command. Origin mismatch. Ignoring.\n");
         }
         if (final_dest[0] != path[strlen(path) - 2] || final_dest[1] != path[strlen(path) -1]) {
             is_valid_command = false;
-            printf("Invalid ROUTE command. Final destination mismatch with. Ignoring.\n");
+            //printf("Invalid ROUTE command. Final destination mismatch with. Ignoring.\n");
         }
         
         char original_path[strlen(path) + 1]; // Create a copy of the original path
@@ -72,7 +72,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
 
         // Processing valid command
         if (is_valid_command) {
-            printf("Valid route.\n");
+            //printf("Valid route.\n");
 
             // Constructing new path
             new_path = (char*)malloc(strlen(destination) + strlen("-") + strlen(path) + 2);
@@ -91,7 +91,7 @@ int RouteHandler(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* shortest_
             }
             free(new_path);
         } else {
-            printf("Invalid route.\n");
+            //printf("Invalid route.\n");
         }
     }
     // Extracting the command details
@@ -129,7 +129,7 @@ int refreshShortestTable(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char* s
         if (shortest_table[index_int] != NULL) {
             shortest_tableChange(shortest_table, index, NULL);
             updated = true;
-            printf("UPDATED THIS FUCKING TABLE\n");
+            //printf("UPDATED THIS FUCKING TABLE\n");
         }
     } else {
         if (shortest_table[index_int] == NULL) {
@@ -192,7 +192,7 @@ void forwarding_tableChange(char* forwarding_table[TABLE_SIZE][TABLE_SIZE], char
     }
 
 
-    printf("Changed forwarding table\n");
+    //printf("Changed forwarding table\n");
 }
 
 // Change entry in shortest Path Table given index and new text
@@ -215,7 +215,7 @@ void shortest_tableChange(char* shortest_table[TABLE_SIZE], char* index, char* i
     } else {
         shortest_table[i] = NULL;
     }
-    printf("Changed shortest path table\n");
+    //printf("Changed shortest path table\n");
 }
 
 
@@ -244,7 +244,7 @@ void expedition_tableChange(char* expedition_table[TABLE_SIZE], char* index, cha
         // Set expedition_table[i] to NULL if input is NULL
         expedition_table[i] = NULL;
     }
-    printf("Changed expedition table\n");
+    //printf("Changed expedition table\n");
 }
 
 void route_propagation(int fd, char* source, char* shortest_path[TABLE_SIZE]) {
